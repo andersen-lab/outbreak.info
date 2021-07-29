@@ -495,6 +495,26 @@ const routes = [{
         /* webpackChunkName: "watch-list" */
         "../views/WatchList.vue"
       )
+  },
+  {
+    name: "BlogRedirect",
+    path: "/blog-redirect/:id",
+    props: true,
+    component: () =>
+      import(
+        /* webpackChunkName: "blog-redirect" */
+        "../views/BlogRedirect.vue"
+      )
+  },
+  {
+    path: "/blog/",
+    redirect: to => ({
+      name: "BlogRedirect"
+    })
+  },
+  {
+    path: "/blog/:id",
+    redirect: "/blog-redirect/:id"
   }
 ];
 
