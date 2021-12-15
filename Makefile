@@ -1,1 +1,3 @@
-run-all: docker-compose up
+run-all:
+	./run_bjorn.sh
+	docker-compose up
