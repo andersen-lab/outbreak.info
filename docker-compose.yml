@@ -1,6 +1,19 @@
 version: "3.9"
 services:
-  vue:
-    image: ""
-  tornado:
   es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.1
+    container_name: es
+    ports:
+      - 9200:9200 
+  tornado:
+    build:
+      context: .
+      dockerfile: Dockerfile-server
+    ports:
+      - 8000:8000
+  vue:
+    build:
+      context: .
+      dockerfile: Dockerfile-client 
+    ports:
+      - 5000:5000

@@ -12,8 +12,7 @@ ENV PATH /web/node_modules/.bin:$PATH
 COPY package.json /web/package.json
 RUN npm install
 RUN npm install @vue/cli@3.7.0 -g
-RUN conda env create -f ../bjorn/evs/env_min.yml
 
 # start app
-CMD ./run-all.sh
+CMD npm run serve -- --port 5000
 

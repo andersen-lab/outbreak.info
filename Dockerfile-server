@@ -1,13 +1,17 @@
 # Dockerfile for running the server side api instance
-# base image
-FROM 
+# base image is python
+FROM python 3.9
 
 # set working directory
-WORKDIR /web/src
+WORKDIR /outbreak-api-lite
 
-# create the conda env for tornado app
-RUN conda env create -f 
+# get the requirements
+COPY requirements.txt 
+COPY tornado_app.py
+
+# install the pre-recs
+RUN pip install -r requirements.txt
 
 # start the api instance
-CMD 
+CMD ['python', './tornado_app.py']
 
