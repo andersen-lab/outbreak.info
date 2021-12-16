@@ -1,19 +1,30 @@
-version: "3.3"
+version: '2.2'
 services:
+  #es from docker image single node
   es:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.1
     container_name: es
-    ports:
-      - 9200:9200 
-  tornado:
     build:
       context: .
-      dockerfile: Dockerfile-server
+      dockerfile: Dockerfile-index
     ports:
-      - 8000:8000
-  vue:
+      - "9200:9200"
+    volumes:
+      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    networks:
+      - some-net
+  #ingest the es db
+  ingest:
+    container_name: ingest
     build:
       context: .
-      dockerfile: Dockerfile-client 
-    ports:
-      - 5000:5000
+      dockerfile: Dockerfile-es
+    restart: on-failure:10
+    depends_on:
+      - es
+    networks:
+        - some-net
+
+networks:
+  some-net:
+    driver: bridge
+      
