@@ -1,3 +1,13 @@
+# outbreak.info Local Build
+
+#Deploying
+1. Clone the repository.
+2. Make sure Docker and Docker-Compose are installed.
+3. Choose from the Makefile commands.
+    ie. make docker compose will fully build and launch the elastic search instance, ingest the data, and 
+
+
+
 # outbreak.info
 During outbreaks of emerging diseases such as COVID-19, efficiently collecting, sharing, and integrating data is critical to scientific research.
 

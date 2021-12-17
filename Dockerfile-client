@@ -1,18 +1,24 @@
 #Dockerfile for running the client side
 # base image
-FROM node:12.2.0-alpine
+FROM node:11.12.0-alpine
 
-# set working directory
-WORKDIR /web/src
+RUN apk update && apk add python make g++
 
-# add `/app/node_modules/.bin` to $PATH
-ENV PATH /web/node_modules/.bin:$PATH
+# make the 'app' folder the current working directory
+WORKDIR /web
 
-# install and cache app dependencies
-COPY package.json /web/package.json
+# copy both 'package.json' and 'package-lock.json' (if available)
+COPY /web/package*.json ./
+
+RUN npm ci
+# install project dependencies
 RUN npm install
-RUN npm install @vue/cli@3.7.0 -g
 
-# start app
-CMD npm run serve -- --port 5000
+# copy project files and folders to the current working directory (i.e. 'app' folder)
+COPY /web .
+
+EXPOSE 5000
+
+# build app for production with minification
+CMD ["npm", "run", "serve", "--", "--port", "5000"]
 

@@ -1,17 +1,13 @@
-# Dockerfile for running the server side api instance
-# base image is python
-FROM python 3.9
+FROM python:3.9.1
+MAINTAINER Chrissy Aceves "caceves@scripps.edu"
 
-# set working directory
-WORKDIR /outbreak-api-lite
+RUN apt-get update -y
+WORKDIR .
+COPY /outbreak-api-lite .
+COPY  /outbreak-api-lite/requirements.txt .
+COPY /outbreak-api-lite/tornado_app.py .
+ADD /outbreak-api-lite/tornado_app.py /
 
-# get the requirements
-COPY requirements.txt 
-COPY tornado_app.py
-
-# install the pre-recs
-RUN pip install -r requirements.txt
-
-# start the api instance
-CMD ['python', './tornado_app.py']
+RUN /bin/bash -c "pip install -r requirements.txt"
+CMD ["python", "-u", "./tornado_app.py"]
 

@@ -1,3 +1,6 @@
 [submodule "outbreak-api-lite"]
 	path = outbreak-api-lite
 	url = ./outbreak-api-lite/
+[submodule "bjorn"]
+	path = bjorn
+	url = ./bjorn/

@@ -1,0 +1,13 @@
+FROM python:3.9.1
+MAINTAINER Chrissy Aceves "caceves@scripps.edu"
+
+RUN apt-get update -y
+WORKDIR .
+COPY /outbreak-api-lite .
+COPY  /outbreak-api-lite/requirements.txt . 
+COPY /outbreak-api-lite/elastic_search.py .
+ADD /outbreak-api-lite/elastic_search.py /
+ADD /new_api_data.json /
+RUN /bin/bash -c "pip install -r requirements.txt"
+CMD ["python", "-u", "./elastic_search.py"]
+
