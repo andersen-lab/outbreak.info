@@ -1,5 +1,12 @@
 version: '2.2'
 services:
+  #bjorn run
+  bjorn:
+    container_name: bjorn
+    build:
+      context: .
+      dockerfile: Dockerfile-bjorn
+    
   #es from docker image single node
   es:
     container_name: es
