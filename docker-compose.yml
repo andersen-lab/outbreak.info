@@ -44,8 +44,6 @@ services:
     restart: on-failure:10
     ports:
       - "8000:8000"
-    depends_on:
-      - ingest
     networks:
       - some-net
     profiles: ["ingest-data", "website"]
