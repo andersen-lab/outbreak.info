@@ -32,19 +32,6 @@
    </div>
   </div>
 
-  <section class="d-flex flex-column justify-content-center align-items-left bg-grag-grey text-light px-3 pt-2 mb-5">
-    <div class="d-flex justify-content-center align-items-center px-5 py-3">
-      <div class="d-flex w-100 justify-content-between">
-        <div>
-          <h4 class="at-a-glance-header m-0">{{localBuildName}}</h4>
-       </div>
-      </div>
-    </div>
-  </section> 
-  <section>
-    <h5>Total Sequences</h5>    
-  </section> 
- 
  <section class="d-flex flex-column justify-content-center align-items-left bg-grag-grey text-light px-3 pt-2 mb-5">
     <div class="d-flex justify-content-center align-items-center px-5 py-3">
       <div class="d-flex w-100 justify-content-between">
@@ -100,7 +87,7 @@ import TypeaheadSelect from "@/components/TypeaheadSelect";
 import SequencingHistogram from "@/components/SequencingHistogram";
 import StackedBargraph from "@/components/StackedBargraph.vue";
 import ReportPrevalence from "@/components/ReportPrevalence.vue";
-import QuickStats from "@/components/QuickStats.vue";
+
 import {
   getGlanceSummary
 } from "@/api/epi-basics.js";
@@ -149,7 +136,6 @@ export default {
     StackedBargraph,
     SequencingHistogram,
     ReportPrevalence,
-    //QuickStats,
  },
   data() {
     return {
