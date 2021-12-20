@@ -1,5 +1,9 @@
-FROM
+FROM continuumio/miniconda3
 
-RUN
+ADD /bjorn/env_min.yml .
+RUN conda env crate -f ./env_min.yml
+COPY /bjorn .
+COPY /bjorn_wrapper.sh .
+COPY /web/src/localConfig.json .
 
-CMD [ 
+CMD ["./bjorn_wrapper.sh"] 
