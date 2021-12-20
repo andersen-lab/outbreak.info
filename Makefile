@@ -20,7 +20,7 @@ clean:
 	docker rmi outbreakinfo_ingest -f
 	docker rmi outbreakinfo_tornado -f
 	docker rmi outbreakinfo_localbuild -f
-	#docker-compose rm bjorn -f
+	docker-compose -f rm bjorn
 	docker-compose rm -f es
 	docker-compose rm -f tornado
 	docker-compose rm -f ingest
