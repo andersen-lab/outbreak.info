@@ -25,7 +25,7 @@ fasta_output_prefix = work_dir + "/chunks_fasta_" + current_datetime
 if data_source == "gisaid_feed":
     rule pull_gisaid_sequences:
         output:
-            meta=temp(dynamic(f"{fasta_output_prefix}/{{sample}}.tsv")),
+            meta=temp(dynamic(f"{fasta_output_prefix}/{{sample}}.tsv.gz")),
             data=temp(dynamic(f"{fasta_output_prefix}/{{sample}}.fasta.gz"))
         threads: max_cpus - 1
         shell:
@@ -33,9 +33,9 @@ if data_source == "gisaid_feed":
             mkdir -p {work_dir};
             mkdir -p {work_dir}/parallel;
             mkdir -p {fasta_output_prefix};
-            ( ( ! ({is_manual_in}) && (curl -u {username}:{password} {gisaid_uri} | xz -d -T8) ) ||
+            ( ( ! ({is_manual_in}) && (curl -u {username}:{password} {gisaid_uri} | xz -d -T4) ) ||
               (cat {gisaid_data} ) ) |
-                    parallel --pipe --tmpdir {work_dir}/parallel --block {chunk_size} -j8 \
+                    parallel --pipe --tmpdir {work_dir}/parallel --block {chunk_size} -j200 \
                         'jq -cr " \
                             select( ( .covv_host|ascii_downcase == \\"human\\" ) \
                                 and ( .sequence|length > {min_length} ) \
@@ -48,9 +48,12 @@ if data_source == "gisaid_feed":
                                 id: .covv_accession_id, \
                                 seq: .sequence|split(\\"\\n\\")|join(\\"\\") }} | \
                             select( .loc|length <= 6 ) | \
-                            \\">\(.strain)\n\(.seq)\t\([.strain, .id, .date, .odate, .lin, (.loc|join(\\"/\\"))]|join(\\"\\t\\"))\\"" | \
+                            {{  c: (.loc[1] // \\"{unknown_value}\\") | ascii_downcase, \
+                                d: (.loc[2] // \\"{unknown_value}\\") | ascii_downcase, \
+                                l: (.loc[3] // \\"{unknown_value}\\") | ascii_downcase }} + (.) | \
+                            \\">\(.strain)\n\(.seq)\t\([.strain, .id, .date, .odate, .lin, .c, .d, .l, (.loc|join(\\"/\\"))]|join(\\"\\t\\"))\\"" | \
                             tee >(cut -f1 | gzip -c > {fasta_output_prefix}/{{#}}.fasta.gz) | \
-                            cut -sf2- | sed "1s/^/strain\\taccession_id\\tdate_collected\\tdate_submitted\\tpangolin_lineage\\tlocstring\\n/" > {fasta_output_prefix}/{{#}}.tsv' || true
+                            cut -sf2- | sed "1s/^/strain\\taccession_id\\tdate_collected\\tdate_submitted\\tpangolin_lineage\\tcountry\\tdivision\\tlocation\\tlocstring\\n/" | gzip -c > {fasta_output_prefix}/{{#}}.tsv.gz' || true
             for file in {fasta_output_prefix}/*.fasta.gz; do
                 cat {reference_fp} | gzip -c >> "$file"
             done || true
@@ -59,7 +62,8 @@ if data_source == "gisaid_feed":
 elif data_source == "alab_release":
     rule clone_alab_sequences:
         output:
-            meta=temp(dynamic(f"{fasta_output_prefix}/{{sample}}.tsv.gz")),
+            #temp
+            meta=(dynamic(f"{fasta_output_prefix}/{{sample}}.tsv.gz")),
             data=temp(dynamic(f"{fasta_output_prefix}/{{sample}}.fasta.gz"))
         threads: 1
         shell:
@@ -69,27 +73,18 @@ elif data_source == "alab_release":
             mkdir -p {work_dir}/parallel
             mkdir -p {fasta_output_prefix}
             git clone https://github.com/andersen-lab/HCoV-19-Genomics.git
-            gzip -rk HCoV-19-Genomics/consensus_sequences/*.fasta
             
-            #select out the files we want
-            #INPUT=HCoV-19-Genomics/metadata.csv
-            #OLDIFS=$IFS
-            #IFS=','
-            #while read flname dob ssn tel status
-            #do
-            #    echo "Name : $flname"
-            #    echo "DOB : $dob"
-            #    echo "SSN : $ssn"
-            #    echo "Telephone : $tel"
-            #    echo "Status : $status"
-            #done < $INPUT
-            #IFS=$OLDIFS
+            find HCoV-19-Genomics/consensus_sequences/ -type f -name "*.fasta" |
+            parallel -j10 -l1000 "gzip -rk {{}}"
             
-            mv HCoV-19-Genomics/consensus_sequences/*.fasta.gz {fasta_output_prefix} 
+            find HCoV-19-Genomics/consensus_sequences/ -type f -name "*.fasta.gz" | 
+            parallel -j10 -l1000 "mv {{}} {fasta_output_prefix}" 
             
             #parallel process from here on out in chunks
             find {fasta_output_prefix} -type f -name "*.fasta.gz" | \
-            parallel --tmpdir {work_dir}/parallel -l {chunk_size} -j4 python/manipulate_metadata.py -i HCoV-19-Genomics/metadata.csv -o {fasta_output_prefix} -f {{}}
+            parallel --tmpdir {work_dir}/parallel -l1000 -j32 \
+            "python/manipulate_metadata.py -i HCoV-19-Genomics/metadata.csv -l HCoV-19-Genomics/lineage_report.csv \
+                -o {fasta_output_prefix} -f {{}} -j {{#}}"
             
             for file in {fasta_output_prefix}/*.fasta.gz;do
                 cat {reference_fp} | gzip -c >> "$file"
@@ -103,21 +98,24 @@ rule align_to_reference:
     input:
         f"{fasta_output_prefix}/{{sample}}.fasta.gz"
     output:
-        temp(f"{fasta_output_prefix}/{{sample}}.mutations.csv")
+        #temp
+        (f"{fasta_output_prefix}/{{sample}}.mutations.csv")
     threads: max_task_cpus
     shell:
         """
-        minimap2 -a -x asm20 --score-N=0 --sam-hit-only --secondary=no -t{max_task_cpus} {reference_fp} {input} |
+        echo "Here"
+        minimap2 -a -x asm5 --sam-hit-only --secondary=no -t{max_task_cpus} {reference_fp} {input} |
             gofasta sam toMultiAlign -t{max_task_cpus} --reference {reference_fp} --trimstart 265 --trimend 29674 --trim --pad |
             python/msa_2_mutations.py -r '{patient_zero}' -d '{data_source}' -i /dev/stdin -o {output}
         """
 
 rule merge_mutations_metadata:
     input:
-        meta=f"{fasta_output_prefix}/{{sample}}.tsv",
+        meta=f"{fasta_output_prefix}/{{sample}}.tsv.gz",
         data=f"{fasta_output_prefix}/{{sample}}.mutations.csv"
     output:
-        temp(f"{fasta_output_prefix}/{{sample}}.jsonl.gz")
+        #temp
+        (f"{fasta_output_prefix}/{{sample}}.jsonl.gz")
     threads: 1
     shell:
         """
@@ -129,18 +127,20 @@ rule merge_json:
     input:
         dynamic(f"{fasta_output_prefix}/{{sample}}.jsonl.gz")
     output:
-        temp(f"{work_dir}/_api_data_{current_datetime}.json.gz")
+        #temp
+        (f"{work_dir}/_api_data_{current_datetime}.json.gz")
     threads: 1
     shell:
         """
-        gunzip -c {input} | parallel --pipe --tmpdir {work_dir}/parallel -j {max_task_cpus} --quote jq -cr 'select((.mutations | length > 0) or .pangolin_lineage == "B") | if ((has("mutations")|not) or .mutations == "") then .mutations = [] else . end' | gzip > {output}
+        gunzip -c {input} | parallel --pipe --tmpdir {work_dir}/parallel -j {max_task_cpus} --quote jq -cr '.' > {output}
         """
 
 rule build_meta:
     input:
         rules.merge_json.output
     output:
-        temp(f"{work_dir}/_api_metadata_{current_datetime}.json")
+        #temp
+        (f"{work_dir}/_api_metadata_{current_datetime}.json")
     threads: 1
     shell:
         """

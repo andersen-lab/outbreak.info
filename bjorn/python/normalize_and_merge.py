@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import re
 import sys
 import glob
 import argparse
@@ -10,197 +11,375 @@ from path import Path
 import bjorn_support as bs
 from mappings import COUNTY_CORRECTIONS
 import numpy as np
-from rapidfuzz import process, fuzz
-
-# COLLECTING USER PARAMETERS
-parser = argparse.ArgumentParser()
-parser.add_argument("-i", "--inputmutations",
-                        type=str,
-                        required=True,
-                        help="Input mutations csv")
-parser.add_argument("-m", "--inputmeta",
-                        type=str,
-                        required=True,
-                        help="Input metadata")
-parser.add_argument("-o", "--outfp",
-                        type=str,
-                        required=True,
-                        help="Output filepath")
-parser.add_argument("-u", "--unknownvalue",
-                        type=str,
-                        required=True,
-                        help="Unknown value")
-parser.add_argument("-n", "--mindate",
-                        type=str,
-                        required=True,
-                        help="Minimum date")
-parser.add_argument("-g", "--geojson",
-                        type=str,
-                        required=True,
-                        help="GeoJSON prefix")
-parser.add_argument("-t", "--currentdate",
-                        type=str,
-                        required=True,
-                        help="Current date")
-
-args = parser.parse_args()
-input_mut = args.inputmutations
-input_metadata = args.inputmeta
-out_fp = args.outfp
-unknown_val = args.unknownvalue
-min_date = args.mindate
-geojson_prefix = args.geojson
-current_datetime = args.currentdate
-date_modified = '-'.join(current_datetime.split('-')[:3]) + '-' + ':'.join(current_datetime.split('-')[3:])
-max_date = '-'.join(current_datetime.split('-')[:3])
-
-try:
-    meta = pd.read_csv(input_metadata, sep='\t')
-    muts = pd.read_csv(input_mut, dtype=str)
-    if len(meta.index) == 0 or len(muts.index) == 0:
-        raise "empty dataframe"
-except Exception as e:
-    pd.DataFrame().to_json(out_fp, orient='records', lines=True)
-    sys.exit(0)
-
-muts = muts[~(muts['gene'].isin(['5UTR', '3UTR']))]
-# ignore mutations found in non-coding regions
-muts = muts.loc[~(muts['gene']=='Non-coding region')]
-# fuse with metadata
-print(f"Fusing muts with metadata...")
-muts_info = [
-    'type', 'mutation', 'gene',
-    'ref_codon', 'pos', 'alt_codon',
-    'is_synonymous',
-    'ref_aa', 'codon_num', 'alt_aa',
-    'absolute_coords',
-    'change_length_nt', 'is_frameshift',
-    'deletion_codon_coords'
-]
-# If deletions not in chunk add columns
+from rapidfuzz import fuzz
+import uuid
+#define global static variables
+meta_info = ['strain', 'accession_id', 'pangolin_lineage', 'date_collected', 'date_submitted', \
+    'date_modified', 'country_id', 'division_id', 'location_id', 'country', 'division', \
+    'location', 'country_lower', 'division_lower', 'location_lower', 'zipcode']
 del_columns = ['is_frameshift', 'change_length_nt', 'deletion_codon_coords', 'absolute_coords']
-muts_columns = muts.columns.tolist()
-for i in del_columns:
-    if i not in muts_columns:
-        muts[i] = np.nan
-muts = muts.groupby('idx').apply(lambda x: x[muts_info].to_dict('records')).reset_index().rename(columns={0:'mutations'})
-muts['mutations'] = muts['mutations'].map(lambda x: [{k:v for k,v in y.items() if pd.notnull(v)} for y in x])
-muts = muts.rename(columns={'idx': 'strain'})
-muts['strain'] = muts['strain'].str.strip()
-data = pd.merge(meta, muts, on='strain', how='left')
+muts_info = ['type', 'mutation', 'gene', 'ref_codon', 'pos', 'alt_codon', 'is_synonymous', \
+    'ref_aa', 'codon_num', 'alt_aa', 'absolute_coords', 'change_length_nt', 'is_frameshift','deletion_codon_coords']
 
-# normalize date information
-data['tmp'] = data['date_collected'].str.split('-')
-data = data[data['tmp'].str.len()>=2]
-data.loc[data['tmp'].str.len()==2, 'date_collected'] += '-15'
-data['date_collected'] = pd.to_datetime(data['date_collected'], errors='coerce')
-data['date_collected'] = data['date_collected'].astype(str)
-data = data[data['date_collected'] <= max_date]
-data = data[data['date_collected'] > min_date]
-data['date_modified'] = date_modified
+#start of functions to support
+def parse_jsonl(json_filepath: str):
+    """
+    Load and parse .jsonl file in read mode.    
 
-# TODO: handle locstring off-by-one errors
+    Parameters
+    ----------
+    json_filepath : str
+        Path to the json file to parse.
 
-data['locstring'] = data['locstring'].str.lower().str.replace('\.', '').str.replace('unknown', '').str.split("/")
-data['country'] = data['locstring'].apply(lambda x: x[1] if len(x) >= 2 else '').str.strip()
-data['division'] = data['locstring'].apply(lambda x: x[2] if len(x) >= 3 else '').str.strip()
-data['location'] = data['locstring'].apply(lambda x: x[3] if len(x) >= 4 else '').str.strip()
-data['country'].fillna('', inplace=True)
-data.loc[:, 'country'] = data['country'].str.strip()
-data.loc[data['country'].str.len() <= 1, 'country'] = ''
-data.loc[data['division'].isna(), 'division'] = ''
-data['division'] = data['division'].copy()
-data.loc[:, 'division'] = data['division'].str.strip()
-data.loc[data['division'].str.len() <= 1, 'division'] = ''
-data.loc[data['location'].isna(), 'location'] = ''
+    Returns
+    -------
+    json_data : list
+        A list of dictionaries.
 
-# TODO: apply NextStrain replacements file
+    """
+    json_data = []
+    with open(json_filepath, 'r') as jfile:
+        for line in jfile:
+            json_data.append(json.loads(line))
+    return(json_data)
 
-# Patches for known causes of geo errors
-data.loc[data['country'] == 'usa', 'country'] = 'united states'
-def norm_territories(x):
-    if x.country in ['puerto rico', 'guam', 'us virgin islands', 'northern mariana islands', 'american samoa']:
-        (x.country, x.division, x.location) = ('united states', x.country, x.division)
-    return x
-data = data.apply(norm_territories, axis=1)
-data.loc[(data['country'].str.contains('congo')) & (data['country'].str.contains(
-    'democratic')), 'country'] = 'democratic republic of the congo'
-data.loc[(data['country'].str.contains('congo')) & ~(data['country'].str.contains(
-    'democratic')), 'country'] = 'republic of congo'
-data.loc[data['country'].str.contains(
-    'eswatini'), 'country'] = "swaziland"
-data.loc[data['country'].str.contains(
-    'bonaire'), 'country'] = "bonaire, sint eustatius and saba"
-data.loc[data['country'].str.contains(
-    'sint eustatius'), 'country'] = "bonaire, sint eustatius and saba"
-data.loc[data['country']=="jonavos apskritis", 'country'] = "lithuania"
-data.loc[data['division'].str.contains('state of mexico'), 'division'] = 'méxico'
-data.loc[data['division'].str.contains('bethlehem'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('hebron'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('jenin'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('jericho'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('ramallah'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('tulkarem'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('nablus'), 'division'] = 'west bank'
-data.loc[data['division'].str.contains('copenhagen'), 'division'] = 'hovedstaden'
-data.loc[data['division'].str.contains('sjaelland'), 'division'] = 'sjælland'
-data.loc[data['division'].str.contains('cape town'), 'division'] = 'western cape'
-data.loc[data['division'].str.contains('western cape'), 'division'] = 'western cape'
-data.loc[data['division'].str.contains('asturias'), 'division'] = 'principado de asturias'
-data.loc[data['division'].str.contains('balear_islands'), 'division'] = 'islas baleamuts'
-data.loc[data['division'].str.contains('illes balears'), 'division'] = 'islas baleamuts'
-data.loc[data['division'].str.contains('canary islands'), 'division'] = 'canaries'
-data.loc[data['division'].str.contains('ceuta'), 'division'] = 'ceuta y melilla'
-data.loc[data['division'].str.contains('melilla'), 'division'] = 'ceuta y melilla'
-data.loc[data['division'].str.contains('bavaria'), 'division'] = 'bayern'
-data.loc[data['division'].str.contains('lower saxony'), 'division'] = 'niedersachsen'
-data.loc[data['division'].str.contains('mecklenburg-western pomerania'), 'division'] = 'mecklenburg-vorpommern'
-data.loc[data['division'].str.contains('rhineland-palatinate'), 'division'] = 'rheinland-pfalz'
-data.loc[(data['division'].str.contains('saxony-anhalt'))
-        & (data['country'].str.contains('germany')), 'division'] = 'sachsen-anhalt'
-data.loc[(data['division'].str.contains('saxony'))
-        & (data['country'].str.contains('germany')), 'division'] = 'sachsen'
-data.loc[data['division'].str.contains('north rhine-westphalia'), 'division'] = 'nordrhein-westfalen'
-data.loc[data['division'].str.contains('argovie'), 'division'] = 'aargau'
-data.loc[data['division'].str.contains('geneva'), 'division'] = 'geneve'
-data.loc[data['division'].str.contains('grabunden'), 'division'] = 'graubunden'
-data.loc[data['division'].str.contains('luzern'), 'division'] = 'lucerne'
-data.loc[data['division'].str.contains('neuenburg'), 'division'] = 'neuchatel'
-data.loc[data['division'].str.contains('obwald'), 'division'] = 'obwalden'
-data.loc[data['division'].str.contains('saint-gall'), 'division'] = 'sankt gallen'
-data.loc[data['division'].str.contains('gallen'), 'division'] = 'sankt gallen'
-data.loc[data['division'].str.contains('turgovia'), 'division'] = 'thurgau'
-data.loc[data['division'].str.contains('waadt'), 'division'] = 'vaud'
-data.loc[data['division'].str.contains('wallis'), 'division'] = 'valais'
-data.loc[:, 'location'] = data['location'].str.replace('county', '').str.replace('parish', '').str.replace(',', '')
-data.loc[data['location'].str.len() <= 1, 'location'] = ''
-data.loc[data['location']=='unk', 'location'] = ''
-data.loc[data['division']==data['country'], 'division'] = ''
-data.fillna('', inplace=True)
+def nextstrain_replacement(nextstrain_filepath: str, meta: pd.DataFrame):
+    """
+    Opens the nextstrain file for standarization and replaces locstrings
+    in the metadata dataframe.
 
-# Match to GADM-derived loc/id database
-with open('{}/gadm_transformed.jsonl'.format(geojson_prefix)) as f:
-    countries = [json.loads(line) for line in f]
-get_geo = lambda b, y: (b[y[2]-1] if 'alias' in b[y[2]] else b[y[2]]) if not y is None else None
-s = lambda f, r: lambda a, b, **params: 100 if a == '' and b == '' else (r if a == '' or b == '' else f(a, b, **params))
-data.loc[:, 'country_match'] = data['country'].apply(lambda x: get_geo(countries, process.extractOne(x, [country['name'] for country in countries], scorer=s(fuzz.ratio, 80))))
-data = data.dropna(axis=0, subset=['country_match'])
-data.loc[:, 'division_match'] = data.apply(lambda x: get_geo(x.country_match['sub'], process.extractOne(x.division, [division['name'] for division in x.country_match['sub']], scorer=s(fuzz.ratio, 70))), axis=1)
-data.loc[:, 'location_match'] = data.apply(lambda x: get_geo(x.division_match['sub'], process.extractOne(x.location, [location['name'] for location in x.division_match['sub']], scorer=s(fuzz.partial_ratio, 60))), axis=1)
-data.loc[:, 'country'] = data['country_match'].apply(lambda x: x['name'])
-data.loc[:, 'country_id'] = data['country_match'].apply(lambda x: x['id'])
-data.loc[:, 'division'] = data['division_match'].apply(lambda x: x['name'])
-data.loc[:, 'division_id'] = data['division_match'].apply(lambda x: x['id'])
-data.loc[:, 'location'] = data['location_match'].apply(lambda x: x['name'])
-data.loc[:, 'location_id'] = data['location_match'].apply(lambda x: x['id'])
-data.loc[data['country_id'] == '', 'country_id'] = unknown_val
-data.loc[data['location_id'] == '', 'location_id'] = unknown_val
-data.loc[data['division_id'] == '', 'division_id'] = unknown_val
-data = data.drop(['country_match', 'division_match', 'location_match'], axis=1)
+    Parameters
+    ---------
+    nexstrain_filepath : str
+        Filepath to the location of the standard nexstrain locations.
+    
+    meta : pd.DataFrame
+        The metadata dataframe.
 
-# TODO: asciify these
-data['country_lower'] = data['country'].str.lower()
-data['division_lower'] = data['division'].str.lower()
-data['location_lower'] = data['location'].str.lower()
+    Returns
+    -------
+    meta : pd.DataFrame
+        The metadata dataframe
+    """
 
-data.to_json(out_fp, orient='records', lines=True)
+    #first we open the nextstrain file and get the string conversions
+    nextstrain = pd.read_csv(nextstrain_filepath, sep="\t", names=["original","replace"])
+    nextstrain['original'] = [item.replace("/*","") for item in nextstrain['original']]
+    nextstrain['replace'] = [item.replace("/*","") for item in nextstrain['replace']]
+    nextstrain['original'] = [item[:-1] if item[-1] == '/' else item for item in nextstrain['original']]
+    next_replace = dict(zip(list(nextstrain['original']), list(nextstrain['replace'])))
+    
+    locstrings = meta['locstring'].tolist()
+    for i,loc in enumerate(locstrings):
+        for key, value in next_replace.items():
+            if str(key) in str(loc):
+                new_str = str(loc).replace(str(key), str(value))
+                locstrings[i] = new_str
+        
+    meta['locstring'] = locstrings
+    return(meta)
+
+def normalize_date(current_datetime: str, meta: pd.DataFrame, min_date: str):
+    """
+    Takes in the current date and normalizes it.
+    
+    Parameters
+    ----------
+    current_datetime : str    
+
+    meta : pd.DataFrame
+    
+    min_date : str
+
+    Returns
+    -------
+    meta : pd.DataFrame    
+
+    """
+    #reformat the string
+    date_modified = '-'.join(current_datetime.split('-')[:3]) + '-' + ':'.join(current_datetime.split('-')[3:])
+    max_date = '-'.join(current_datetime.split('-')[:3])
+    
+    # normalize date information
+    meta['tmp'] = meta['date_collected'].str.split('-')
+    meta = meta[meta['tmp'].str.len()>=2]
+    meta.loc[meta['tmp'].str.len()==2, 'date_collected'] += '-15'
+    meta['date_collected'] = pd.to_datetime(meta['date_collected'], errors='coerce')
+    meta['date_collected'] = meta['date_collected'].astype(str)
+    meta = meta[meta['date_collected'] <= max_date]
+    meta = meta[meta['date_collected'] > min_date]
+    meta['date_modified'] = date_modified
+    return(meta)
+
+def off_by_one_location(meta: pd.DataFrame, std_locs: list):
+    """
+    Takes in all proper countries, divisions, and location and 
+    matches each value using fuzzy matching to the locstrings.
+
+    Parameters
+    ----------
+    meta : pd.DataFrame
+        The metadata dataframe.
+
+    std_locs : list
+        List of dictionaries for the locations.    
+
+    Returns
+    -------
+    meta : pd.DataFrame
+        The metadata dataframe.
+    """
+    unknown_val = 'unkn'
+
+    #make an empy list for the data to be held in
+    std_loc = []
+    std_ids = []
+    
+    #country location variable
+    country_index_location = 0
+
+    #we just use this loop to find out which string is the country, then go from there
+    for index, row in meta.iterrows():
+        locstring = str(row['locstring']) 
+        loc_list = locstring.split("/")
+        loc_list = [loc.strip() for loc in loc_list]
+        #in the event that we have no normal splits
+        if len(loc_list) == 0:
+            std_loc.append((unknown_val, unknown_val, unknown_val))
+            continue
+        
+        #we find the country first
+        compare_dict = std_locs[0]
+        high_ratio = 0
+        country_string = ''
+        country_id_string = ''
+
+        for i,loc in enumerate(loc_list): 
+            #we look for the country in 'name' category
+            for country in std_locs:
+                country_name = country['name'] 
+                ratio = fuzz.ratio(country_name.lower(),loc.lower()) 
+                if ratio > high_ratio:
+                    high_ratio = ratio
+                    country_string = country_name
+                    country_index_location = i
+                    country_id_string = country['id']
+            #we look for the country in 'id' category
+            for country in std_locs:
+                country_id = country['id']
+                ratio = fuzz.ratio(country_id.lower(),loc.lower())
+                if ratio > high_ratio:
+                    high_ratio = ratio
+                    country_string = country['name']
+                    country_index_location = i   
+                    country_id_string = country['id']
+        high_ratio = 0 
+        division_string = ''
+        division_id_string = ''
+
+        #next we figure out if we have a division or location in the next slot
+        try:
+            next_string = loc_list[country_index_location+1]
+        except:
+            std_loc.append((country_string, unknown_val, unknown_val))
+            std_ids.append((country_id_string, unknown_val, unknown_val))
+            continue
+        
+        #we go back and get the sub divisions for the country
+        for country in std_locs:
+            if country['name'] == country_string:
+                division_list = country['sub']
+        
+        #we go through all the sub divisions to see if we can match one highly enough
+        for i, division in enumerate(division_list): 
+            division_name = division['name']
+            division_id = division['id']
+            ratio = fuzz.ratio(division_name.lower(),next_string.lower())
+            
+            if ratio > high_ratio and ratio > 90:
+                high_ratio = ratio
+                division_string = division_name
+                division_id_string = division_id
+
+            ratio = fuzz.ratio(division_id.lower(), next_string.lower())
+            if ratio > high_ratio and ratio > 90:
+                high_ratio = ratio
+                division_string = division_name
+                division_id_string = division_id        
+        location_list = []
+       
+        #we didn't find a division, maybe the next string is a location
+        if division_string == '':
+            division_string = unknown_val
+            for country in std_locs:
+                if country['name'] == country_string:
+                    division_list = country['sub']
+                    for div in division_list:
+                        location_list.extend(div['sub'])
+        #we found a division
+        else:
+           
+            for country in std_locs:
+                if country['name'] == country_string:
+                    division_list = country['sub']
+                    for div in division_list:
+                        if div['name'] == division_string:
+                            location_list = div['sub']
+            
+            try:
+                next_string = loc_list[country_index_location+2]
+            #their is no next string
+            except:
+                std_loc.append((country_string, division_string, unknown_val))
+                std_ids.append((country_id_string, division_id_string, unknown_val))
+                continue
+
+        #we looked for the division, now we look for the location
+        high_ratio = 0
+        location_string = ''
+        location_id_string = ''
+        #iterate the loications
+        for location in location_list:
+            location_name = location['name']
+            ratio = fuzz.ratio(location_name.lower(),next_string.lower())
+            
+            if ratio > high_ratio and ratio > 70:
+                high_ratio = ratio
+                location_string = location_name
+                location_id_string = location['id']
+         
+        if location_string != '':
+            #we found both a division and location
+            std_loc.append((country_string, division_string, location_string))  
+            std_ids.append((country_id_string, division_id_string, location_id_string))
+        else:
+            std_loc.append((country_string, division_string, unknown_val))
+            std_ids.append((country_id_string, division_id_string, unknown_val))
+     
+    loc_df = pd.DataFrame(std_loc, columns=['country','division','location'])
+    ids_df = pd.DataFrame(std_ids, columns=['country_id', 'division_id', 'location_id'])
+    if "location" in meta and "country" in meta and "division" in meta:
+        meta.drop(["location", "country", "division"], inplace=True, axis=1)
+    
+    meta = pd.concat([meta, loc_df, ids_df], axis=1)
+    return(meta)
+
+def main():
+    """
+    Main function for use.
+    """
+    #COLLECTING USER PARAMETERS
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--inputmutations",
+                            type=str,
+                            required=True,
+                            help="Input mutations csv")
+    parser.add_argument("-m", "--inputmeta",
+                            type=str,
+                            required=True,
+                            help="Input metadata")
+    parser.add_argument("-o", "--outfp",
+                            type=str,
+                            required=True,
+                            help="Output filepath")
+    parser.add_argument("-u", "--unknownvalue",
+                            type=str,
+                            required=True,
+                            help="Unknown value")
+    parser.add_argument("-n", "--mindate",
+                            type=str,
+                            required=True,
+                            help="Minimum date")
+    parser.add_argument("-g", "--geojson",
+                            type=str,
+                            required=True,
+                            help="GeoJSON prefix")
+    parser.add_argument("-t", "--currentdate",
+                            type=str,
+                            required=True,
+                            help="Current date")
+
+
+    args = parser.parse_args()
+    input_mut = args.inputmutations
+    input_metadata = args.inputmeta
+    out_fp = args.outfp
+    unknown_val = args.unknownvalue
+    min_date = args.mindate
+    geojson_prefix = args.geojson
+    current_datetime = args.currentdate
+
+    #handle the case of an empty dataframe
+    try:
+        meta = pd.read_csv(input_metadata, sep='\t')
+        if len(meta.index) == 0:
+            raise "empty dataframe"
+    except Exception as e:
+        pd.DataFrame().to_json(out_fp, orient='records', lines=True)
+        sys.exit(0)
+
+    #normalize the date
+    meta = normalize_date(current_datetime, meta, min_date)
+
+    #use nextstrain standard conversions to replace locstrings
+    meta = nextstrain_replacement(os.path.join(geojson_prefix, "gisaid_geoLocationRules.tsv"), meta)
+
+    #parse apart our expected geolocs
+    std_locs = parse_jsonl(os.path.join(geojson_prefix, "gadm_transformed.jsonl"))
+
+    meta = off_by_one_location(meta, std_locs)
+    #keep the county corrections mapping
+    #print(meta['location'])
+    meta['location'] = [str(item) for item in meta['location'].tolist()]
+    meta = meta.replace({"location":COUNTY_CORRECTIONS})
+
+    meta['country_lower'] = meta['country'].str.lower()
+    meta['division_lower'] = meta['division'].str.lower()
+    meta['location_lower'] = meta['location'].str.lower()
+    meta.fillna(unknown_val, inplace=True)
+
+    muts = pd.read_csv(input_mut, dtype=str)
+    muts = muts[~(muts['gene'].isin(['5UTR', '3UTR']))]
+
+    #ignore mutations found in non-coding regions
+    muts = muts.loc[~(muts['gene']=='Non-coding region')]
+    #fuse with metadata
+    print(f"Fusing muts with metadata...")
+    # concat with pd
+
+    # If deletions not in chunk add columns
+    muts_columns = muts.columns.tolist()
+    for i in del_columns:
+        if i not in muts_columns:
+            muts[i] = np.nan
+    muts = muts.groupby('idx').apply(lambda x: x[muts_info].to_dict('records')).reset_index().rename(columns={0:'mutations'})
+    muts['mutations'] = muts['mutations'].map(lambda x: [{k:v for k,v in y.items() if pd.notnull(v)} for y in x])
+
+    muts = muts.rename(columns={'idx': 'strain'})
+    muts['strain'] = muts['strain'].str.strip()
+    meta['strain'] = meta['strain'].str.strip()
+   
+    templ = len(meta)
+    #lets assign anything without an accession id to have a random string as accesion
+    meta['accession_id'] = meta.apply(lambda row: row['accession_id'] if (str(row['accession_id']) != 'None') else (uuid.uuid4().hex[:6].upper()), axis=1)
+    
+    meta = meta[meta['accession_id'] != 'None']
+    if templ != len(meta):
+        print(meta.columns)
+        print(meta['accession_id'], meta['strain'])
+        print("LOST ON ACCESION")
+    
+    if "zipcode" in meta.columns:
+        td = pd.merge(meta[meta_info], muts, on='strain', how='left')
+        if len(td) != len(meta):
+            print(td)
+            print(meta)
+        pd.merge(meta[meta_info], muts, on='strain', how='left').to_json(out_fp, orient='records', lines=True)
+    
+    else:
+        meta_info.remove("zipcode")
+        pd.merge(meta[meta_info], muts, on='strain', how='left').to_json(out_fp, orient='records', lines=True)
+
+
+if __name__ == "__main__":
+    main()
