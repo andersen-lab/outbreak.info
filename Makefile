@@ -28,7 +28,7 @@ clean:
 
 #runs bjorn only to create new data
 run-new-data:
-	docker-compose --profile new-data --build
+	docker-compose --profile new-data up --build
 
 #ingests new data and then brings up the web service
 run-local-build-and-ingest:
