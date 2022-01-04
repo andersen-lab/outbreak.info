@@ -20,7 +20,7 @@ clean:
 	docker rmi outbreakinfo_ingest -f
 	docker rmi outbreakinfo_tornado -f
 	docker rmi outbreakinfo_localbuild -f
-	docker-compose -f rm bjorn
+	docker-compose rm -f bjorn
 	docker-compose rm -f es
 	docker-compose rm -f tornado
 	docker-compose rm -f ingest
@@ -37,6 +37,10 @@ run-local-build-and-ingest:
 #only brings up the es instace, tornado instance, and local build for website viewing
 run-local-build:
 	docker-compose --profile website up --build
+
+#build all services
+build-all:
+	docker-compose --profile all build
 
 #run all services, including bjorn
 run-all:
