@@ -2,14 +2,16 @@ version: '3.9'
 services:
   #bjorn run
   bjorn:
+    image: andersenlabapps/outbreak-info-bjorn
     container_name: bjorn
     build:
       context: .
       dockerfile: Dockerfile-bjorn
-    profiles: ["new-data"]    
+    profiles: ["new-data", "all"]    
   
   #es from docker image single node
   es:
+    image: andersenlabapps/outbreak-info-es
     container_name: es
     build:
       context: .
@@ -20,10 +22,11 @@ services:
       - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     networks:
       - some-net
-    profiles: ["ingest-data", "website"]
+    profiles: ["ingest-data", "website", "all"]
   
   #ingest the es db
   ingest:
+    image: andersenlabapps/outbreak-info-ingest
     container_name: ingest
     build:
       context: .
@@ -32,11 +35,12 @@ services:
     depends_on:
       - es
     networks:
-        - some-net
-    profiles: ["ingest-data"]
+      - some-net 
+    profiles: ["ingest-data", "all"]
   
   #start up the api
   tornado:
+    image: andersenlabapps/outbreak-info-tornado
     container_name: tornado
     build:
       context: .
@@ -46,10 +50,11 @@ services:
       - "8000:8000"
     networks:
       - some-net
-    profiles: ["ingest-data", "website"]
+    profiles: ["ingest-data", "website", "all"]
 
   #start up the local build
   localbuild:
+    image: andersenlabapps/outbreak-info-website
     container_name: localbuild
     build:
       context: .
@@ -61,9 +66,8 @@ services:
       - some-net 
     ports:
       - "5000:5000"
-    profiles: ["ingest-data", "website"]
+    profiles: ["ingest-data", "website", "all"]
              
-
 networks:
   some-net:
     driver: bridge
