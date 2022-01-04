@@ -1,6 +1,7 @@
 {
   "local-build-name": "Andersen Lab Build",
-  "site-url": "sf.info",
+  "siteurl": "sf.info",
   "location-focus": "USA_US-CA_06073",
-  "path-to-zipcodes":""
+  "path-to-zipcodes":"/home/chrissy/outbreak.info/CensusZip.geojson",
+  "cores":32
 }

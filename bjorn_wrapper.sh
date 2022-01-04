@@ -1,2 +1,4 @@
 #!/bin/bash
-snakemake -s /bjorn/bjorn.smk --cores PARAM --scheduler greedy all
+PARAM=$(jq .cores ./localConfig.json)
+echo $PARAM
+snakemake -s ./bjorn.smk --cores $PARAM --scheduler greedy all

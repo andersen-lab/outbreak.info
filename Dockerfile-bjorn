@@ -1,9 +1,15 @@
 FROM continuumio/miniconda3
 
-ADD /bjorn/env_min.yml .
-RUN conda env crate -f ./env_min.yml
+#create conda env
+ADD /bjorn/envs/env_min.yml .
+RUN conda env create -f ./env_min.yml
+#RUN chmod +x ./bjorn_wrapper.sh
+
+RUN apt-get -y update && apt-get -y install jq
+#activate the env
+SHELL ["conda", "run", "-n", "bjorndev", "/bin/bash", "-c"]
+COPY /web/src/localConfig.json .
+ADD /web/src/localConfig.json .
 COPY /bjorn .
 COPY /bjorn_wrapper.sh .
-COPY /web/src/localConfig.json .
-
-CMD ["./bjorn_wrapper.sh"] 
+CMD ["conda", "run", "-n", "bjorndev", "./bjorn_wrapper.sh"] 
