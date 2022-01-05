@@ -15,11 +15,11 @@
 
 #removes all prior images
 clean:
-	docker rmi outbreakinfo_bjorn -f
-	docker rmi outbreakinfo_es -f
-	docker rmi outbreakinfo_ingest -f
-	docker rmi outbreakinfo_tornado -f
-	docker rmi outbreakinfo_localbuild -f
+	docker rmi andersenlabapps/outbreak-info-website -f
+	docker rmi andersenlabapps/outbreak-info-bjorn -f
+	docker rmi andersenlabapps/outbreak-info-tornado -f
+	docker rmi andersenlabapps/outbreak-info-es -f
+	docker rmi andersenlabapps/outbreak-info-ingest -f
 	docker-compose rm -f bjorn
 	docker-compose rm -f es
 	docker-compose rm -f tornado

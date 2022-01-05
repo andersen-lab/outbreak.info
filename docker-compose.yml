@@ -19,7 +19,7 @@ services:
     ports:
       - "9200:9200"
     volumes:
-      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - data01:/usr/share/elasticsearch/data
     networks:
       - some-net
     profiles: ["ingest-data", "website", "all"]
@@ -36,8 +36,6 @@ services:
       - es
     networks:
       - some-net 
-    volumes:
-      - data01:/data
     profiles: ["ingest-data", "all"]
   
   #start up the api

@@ -10,7 +10,7 @@ WORKDIR /web
 # copy both 'package.json' and 'package-lock.json' (if available)
 COPY /web/package*.json ./
 
-RUN npm ci
+#RUN npm ci
 # install project dependencies
 RUN npm install
 
