@@ -91,7 +91,7 @@ export default Vue.extend({
       margin: {
         top: 18,
         bottom: 30,
-        left: 55,
+        left: 150,
         right: 10
       },
       marginHist: {
@@ -225,7 +225,9 @@ export default Vue.extend({
       this.y = this.y
         .range([0, this.height-this.margin.top-this.margin.bottom])
         .padding(0.1)
-        .domain(this.updatedData.map(d => d.loc_code));
+        .domain(this.updatedData.map(d => d.name));
+        //.tickValues(this.updatedData.map(d => d.name));
+      
       // scale the x component
       this.x = this.x
         .domain([0,1])
@@ -266,16 +268,15 @@ export default Vue.extend({
       
      // calculate label positions so they don't overlap
       const labelHeight = 18;
-      console.log("this data", this.updatedData);
       barSelector.join(
         enter => {
           const barGrp = enter.append("g")
             .attr("class", "stacked-bar-chart")
-            .attr("id", d => d.loc_code)
+            .attr("id", d => d.name)
           barGrp.append("rect")
             .attr("x", d => this.x(0))
             .attr("width", d => this.x(d.total_count_norm))
-            .attr("y", d => this.y(d.loc_code))
+            .attr("y", d => this.y(d.name))
             .attr("height", this.y.bandwidth())
             .style("fill", "#69b3a2")
             .on("click", d => this.destroy(d))
