@@ -2,14 +2,21 @@
 <div>
   <h5 class="m-0">Percent of Sequences per Location</h5>
   <h5 class="m-0">Admin Level {{admin_level}}</h5>
-  <small class="text-uppercase m-0">Click on bar to expand subregions</small>
+  <small class="text-uppercase m-0">Click on bar to expand subregions and click button to go back.</small>
+  <small>  
+  <button class="button" id="button">
+    <slot>Back</slot>
+  </button>
+  </small>
   <svg :width="width" :height="height" class="report-stacked-bar" ref="stacked_bar" :name="title">
     <g :transform="`translate(${margin.left},${margin.top})`" ref="chart">
     </g>
     <g class="epi-axis axis--y" ref="yAxis" :transform="`translate(${margin.left},${margin.top})`"></g>
     <g class="epi-axis axis--x" ref="xAxis" :transform="`translate(${margin.left},${height - margin.bottom})`"></g>
+    <button class="button" id="button">
+      <slot>Back</slot>
+    </button>
   </svg>
-
   <div ref="tooltip_choro" class="tooltip-basic box-shadow" id="tooltip-choro">
     <h5 id="location-name"></h5>
     <em id="no-sequencing">No reported sequencing</em>
@@ -118,10 +125,12 @@ export default Vue.extend({
       lineages: null,
       // refs
       chart: null,
-      legend: null
+      legend: null,
+      prevLoc: [],
     })
   },
   mounted() {
+    document.getElementById("button").addEventListener("click", this.buttonBack)
     this.$nextTick(function() {
       window.addEventListener("resize", this.debounceSetDims);
       document.addEventListener("mousemove", evt => {
@@ -330,10 +339,22 @@ export default Vue.extend({
       select(this.$refs.tooltip_choro)
         .style("display", "none");
    },
+   buttonBack(d){
+     console.log('heree');
+     if (this.admin_level > 0){
+       this.admin_level -= 1;
+       this.targetLoc = this.prevLoc.at(-1);
+       this.prevLoc.pop();
+       this.sortByAdmin(); 
+       this.removeElements();
+       this.updatePlot();
+     }
+   },
    destroy(d) {
      // bump the admin level if appropriate
      if (this.admin_level < 2 && d.loc_code != '' && d.loc_code != 'unkn'){ 
      this.admin_level += 1;
+     this.prevLoc.push(this.targetLoc);
      // change the targetLoc
      this.targetLoc = d.loc_code;
      this.sortByAdmin();
