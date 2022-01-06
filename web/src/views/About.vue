@@ -9,12 +9,13 @@
         </div>
         <h1>Local Build</h1>
         
-        <!--<h5 class="justify-content-left"> Your Local Build at a Glance</h5>
-        <div class="glance text-light">
-            <div class="item1"> Andersen Lab Build</div> 
-            <div class="item2">Total Sequences: {{ resourceCount }}</div>
-            <div class="item3">Item 3</div>
-        </div>-->
+        <h5 class="justify-content-left text-left" style="font-size:30px"> Your Local Build at a Glance</h5>
+          <div class="text-left" style="font-size:24px">
+            <div class="item1" v-if="buildName">{{buildName}}</div> 
+            <div class="item2" v-if="total">Total Sequences: {{total}}</div>
+            <div class="item3" v-if="gitRepo">Orignal Data Located At: {{ gitRepo }}</div>
+          </div>
+        <div class="glance"/>
         <p class="text-left focustext py-2">In response to the current outbreak of SARS-CoV-2 (the virus that causes COVID-19), researchers worldwide have been generating and openly sharing data, publications, reagents, code, protocols, and more.
           Broad sharing of these resources improves the speed and efficiency of science. Unfortunately, there are no uniform standards and repositories for collecting all this information in one place.</p>
         
@@ -55,13 +56,6 @@
             </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <div class="bg-light d-flex justify-content-center align-items-center">
-      <div class="bg-light border-top pt-3 pb-5" id="jobs">
-        <h4 class="mb-4">Open positions</h4>
-        <Jobs />
       </div>
     </div>
 
@@ -112,26 +106,29 @@ import {
 } from "@/api/resources.js";
 import {
   getSequenceCount,
+  getLocationBasics,
   getBasicLocationReportData,
 } from "@/api/genomics.js";
 import EmailSubscription from "@/components/EmailSubscription.vue";
-import Jobs from "@/components/Jobs.vue";
+import json from "@/localConfig.json";
 export default Vue.extend({
   name: "About",
   computed: {
     ...mapState("admin", ["funding", "team"])
   },
   components: {
-    Jobs,
     FontAwesomeIcon,
   },
   data() {
     return ({
       loc: "Worldwide",
+      total: null,
+      gitRepo: null,
+      buildName:null,
       resourceCount: null,
       gisaidCount: null,
       summaryData:null,
-      resourceSubscription: null,
+      curatedSubscription: null,
       basicSubscription: null,
       genomicsSubscription: null
     })
@@ -152,10 +149,16 @@ export default Vue.extend({
   },
   mounted() {
     this.setupReport();
+    this.buildName = json["localBuildName"];
+    this.gitRepo = json["gitRepo"];
     let twitterScript = document.createElement('script');
     twitterScript.setAttribute("src", "https://platform.twitter.com/widgets.js");
     document.head.appendChild(twitterScript);
-    // get totals from the API
+    
+    this.curatedSubscription = getLocationBasics(this.$genomicsurl).subscribe(results => {
+      this.total = results.total;
+    })
+
     this.resourceSubscription = getResourceTotal(this.$resourceurl).subscribe(total => {
       this.resourceCount = total.floor;
     })
@@ -165,8 +168,11 @@ export default Vue.extend({
     })
   },
   destroyed() {
-    if (this.resourceSubscription) {
-      this.resourceSubscription.unsubscribe();
+     if (this.resourceSubscription) {
+     this.resourceSubscription.unsubscribe();
+    }
+    if (this.curatedSubscription) {
+      this.curatedSubscription.unsubscribe();
     }
     if (this.genomicsSubscription) {
       this.genomicsSubscription.unsubscribe();
@@ -185,7 +191,7 @@ export default Vue.extend({
 .glance {
  //margin: 20px auto;
   width:100%;
-  height:150px;
+  height:10px;
   background-color: $secondary-color;
   display:grid;
   padding:0;
