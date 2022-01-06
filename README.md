@@ -1,30 +1,27 @@
-# outbreak.info Local Build
+# About outbreak.info Local Build
+Outbreak.info local build is a spin-off project of [outbreak.info](https://outbreak.info/) from Scripps Research that encourages users to launch their own genomic analysis platforms using custom data sets. It allows users to take their own sequencing data and metadata, and build an individual database, server, and website with similar functionality to the "Variants" arm of [outbreak.info](https://outbreak.info/) with only a configuration file and several terminal commands.  
 
-#Deploying
-1. Clone the repository.
-2. Make sure Docker and Docker-Compose are installed.
-3. Choose from the Makefile commands.
-    ie. make docker compose will fully build and launch the elastic search instance, ingest the data, and 
+## How it works
 
 
-
-# outbreak.info
+# About outbreak.info
 During outbreaks of emerging diseases such as COVID-19, efficiently collecting, sharing, and integrating data is critical to scientific research.
 
 outbreak.info is a standardized, searchable platform to discover and explore COVID-19 and SARS-CoV-2 data from the [Center for Viral Systems Biology](http://cvisb.org/) at Scripps Research. It contains three parts: a standardized searchable database of COVID-19 research; customizable real-time surveillance reports on SARS-CoV-2 variants and mutations; and an explorable interface to examine changes in epidemiological data.
 
 *Disclaimer: This project is a work-in progress. Please submit an [issue](https://github.com/SuLab/outbreak.info/issues) if you notice any bugs or want to suggest features.*
 
-# Data sources
-- See [outbreak.info sources](https://outbreak.info/sources)
 
-# Related projects
-- [Outbreak.api](https://github.com/biothings/outbreak.api) -- repo for the back-end API
-- [outbreak.info-resources](https://github.com/SuLab/outbreak.info-resources) -- data schemas and harvesters for COVID-19 resources
+# Deploying
+Several things are required for deployment.
+ 
+1. Clone the repository.
+   a. Make sure the submodules bjorn and outbreak-lite-api are populated.
+2. Make sure Docker and Docker-Compose are installed.
+3. Modify the configuration file [localConfig.json](https://github.com/andersen-lab/outbreak.info/blob/county_info/web/src/localConfig.json)
+   a. Description of each of these parameters can be found [here]()  
+4. Choose from the Makefile commands.
+   a. `make run-website` will bring up the tornado server, elastic search database, and website
+	
+# Data Formating 
 
-# Deploying a local version of the site
-1. Clone the repository
-2. Make sure you have [node & npm] (https://nodejs.org/en/) and [Vue & Vue CLI](https://cli.vuejs.org/guide/installation.html) installed.
-3. In terminal, navigate to the `src` directory of this repository.
-4. Install **node_modules** by running `npm install`.
-5. Launch a local server with hot-reloads by running `npm run serve`.

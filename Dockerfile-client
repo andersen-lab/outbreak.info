@@ -1,24 +1,10 @@
-#Dockerfile for running the client side
-# base image
 FROM node:11.12.0-alpine
-
+MAINTAINER Chrissy Aceves "caceves@scripps.edu"
 RUN apk update && apk add python make g++
-
-# make the 'app' folder the current working directory
 WORKDIR /web
-
-# copy both 'package.json' and 'package-lock.json' (if available)
 COPY /web/package*.json ./
-
-#RUN npm ci
-# install project dependencies
 RUN npm install
-
-# copy project files and folders to the current working directory (i.e. 'app' folder)
 COPY /web .
-
 EXPOSE 5000
-
-# build app for production with minification
 CMD ["npm", "run", "serve", "--", "--port", "5000"]
 

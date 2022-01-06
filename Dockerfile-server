@@ -1,6 +1,5 @@
 FROM python:3.9.1
 MAINTAINER Chrissy Aceves "caceves@scripps.edu"
-
 RUN apt-get update -y
 WORKDIR .
 COPY /outbreak-api-lite .
