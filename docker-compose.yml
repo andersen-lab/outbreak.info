@@ -22,10 +22,12 @@ services:
       - data01:/usr/share/elasticsearch/data
     networks:
       - some-net
-    profiles: ["ingest-data", "website", "all"]
+    profiles: ["ingest-data", "website", "all", "debug"]
   
   #ingest the es db
   ingest:
+    logging:
+      driver: none
     image: andersenlabapps/outbreak-info-ingest
     container_name: ingest
     build:
@@ -50,7 +52,7 @@ services:
       - "8000:8000"
     networks:
       - some-net
-    profiles: ["ingest-data", "website", "all"]
+    profiles: ["ingest-data", "website", "all", "debug"]
 
   #start up the local build
   localbuild:

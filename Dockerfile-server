@@ -7,7 +7,8 @@ COPY /outbreak-api-lite .
 COPY  /outbreak-api-lite/requirements.txt .
 COPY /outbreak-api-lite/tornado_app.py .
 ADD /outbreak-api-lite/tornado_app.py /
-
+EXPOSE 8000
+RUN echo "HERE"
 RUN /bin/bash -c "pip install -r requirements.txt"
 CMD ["python", "-u", "./tornado_app.py"]
 
