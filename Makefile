@@ -20,28 +20,27 @@ clean:
 	docker rmi andersenlabapps/outbreak-info-tornado -f
 	docker rmi andersenlabapps/outbreak-info-es -f
 	docker rmi andersenlabapps/outbreak-info-ingest -f
-	docker-compose rm -f bjorn
-	docker-compose rm -f es
-	docker-compose rm -f tornado
-	docker-compose rm -f ingest
-	docker-compose rm -f localbuild
 
-#runs bjorn only to create new data
-run-new-data:
+build-new-data:
 	docker-compose --profile new-data up --build
 
-#ingests new data and then brings up the web service
-run-local-build-and-ingest:
+run-new-data:
+	docker-compose --profile new-data up 
+
+build-ingest:
+	docker-compose --profile ingest up --build
+
+run-ingest:
 	docker-compose --profile ingest-data up --build
 
-#only brings up the es instace, tornado instance, and local build for website viewing
-run-local-build:
-	docker-compose --profile website up --build
+build-website:
+	dcoker-compose --profile website up --build
 
-#build all services
+run-website:
+	docker-compose --profile website up
+
 build-all:
-	docker-compose --profile all build
+	docker-compose --profile all --build
 
-#run all services, including bjorn
 run-all:
-	docker-compose up
+	docker-compose --profile all up
