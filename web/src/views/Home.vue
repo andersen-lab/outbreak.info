@@ -337,9 +337,9 @@ export default {
     }
    },
   mounted() {
-    this.localBuildName = json['local-build-name']
+    this.localBuildName = json['localBuildName']
     this.setupReport();
-    this.loc= json["location-focus"];
+    this.loc= json["locationFocus"];
     this.updateSequenceCount();
     this.getAllSequencesByLocation(this.admin_level);
     const locations = Vue.$cookies.get("custom_locations");

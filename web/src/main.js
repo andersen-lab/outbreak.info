@@ -8,13 +8,15 @@ import VueCookies from "vue-cookies";
 import VueMeta from "vue-meta";
 
 import "tippy.js/dist/tippy.css";
-
+import json from "@/localConfig.json";
 Vue.config.productionTip = false;
-Vue.prototype.$apiurl = "http://kenny.scripps.edu:9200/hcov19/";
+var siteUrl = json["siteUrl"]
+Vue.prototype.$apiurl = "http://" + siteUrl + ":9200/hcov19/";
 //Vue.prototype.$apiurl = "https://api.outbreak.info/covid19/";
 Vue.prototype.$resourceurl = "https://api.outbreak.info/resources/";
 //Vue.prototype.$genomicsurl = "https://api.outbreak.info/genomics/";
-Vue.prototype.$genomicsurl = "http://kenny.scripps.edu:8000/hcov19/";
+Vue.prototype.$genomicsurl = "http://" + siteUrl + ":8000/hcov19/";
+console.log(Vue.prototype.$genomicsurl);
 
 Vue.use(VueRx);
 Vue.use(VueCookies);

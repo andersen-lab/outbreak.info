@@ -43,7 +43,7 @@ ROUTES = [
 # API url to grab all the resource IDs
 API_URL = "https://api.outbreak.info/resources/query?fields=_id"
 
-SITE_URL = "https://{url}".format(url=localConfig['site-url'])
+SITE_URL = "https://{url}".format(url=localConfig['siteUrl'])
 
 def fetchOne(url, scroll_id = None):
     if(scroll_id is not None):
