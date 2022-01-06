@@ -116,7 +116,7 @@ export default {
     var self = this;
     var currentTime = new Date();
     self.year = currentTime.getFullYear();
-    this.localBuildName = json['local-build-name']  
+    this.localBuildName = json['localBuildName']  
   }
 }
 </script>
