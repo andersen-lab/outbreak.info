@@ -9,7 +9,7 @@
         </div>
         <h1>Local Build</h1>
         
-        <h5 class="justify-content-left text-left" style="font-size:30px"> Your Local Build at a Glance</h5>
+        <h5 class="justify-content-left text-left" style="font-size:30px" v-if="buildName || total || gitRepo"> Your Local Build at a Glance</h5>
           <div class="text-left" style="font-size:24px">
             <div class="item1" v-if="buildName">{{buildName}}</div> 
             <div class="item2" v-if="total">Total Sequences: {{total}}</div>
@@ -189,7 +189,8 @@ export default Vue.extend({
 }
 
 .glance {
- //margin: 20px auto;
+  margin-top: 25px;
+  margin-bottom: 25px;
   width:100%;
   height:10px;
   background-color: $secondary-color;
