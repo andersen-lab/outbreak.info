@@ -1415,7 +1415,8 @@ export function findPangolin(apiurl, queryString) {
 
 export function getDateUpdated(apiurl) {
   const timestamp = Math.round(new Date().getTime() / 8.64e7);
-  const url = `${apiurl}metadata?timestamp=${timestamp}`;
+  const url = `${apiurl}metadata`;
+  console.log(url);
 
   return from(
     axios.get(url, {
@@ -1424,12 +1425,12 @@ export function getDateUpdated(apiurl) {
       }
     })
   ).pipe(
-    pluck("data", "build_date"),
+    pluck("data"),
     map(result => {
       const today = new Date();
       let lastUpdated;
-      const strictIsoParse = timeParse("%Y-%m-%dT%H:%M:%S.%f%Z");
-      const dateUpdated = strictIsoParse(result); // ensure the time is parsed as PDT
+      const strictIsoParse = timeParse("%Y-%m-%dT%H:%M:%SZ");
+      const dateUpdated = strictIsoParse(result['lastUpdated']); // ensure the time is parsed as PDT
       if (dateUpdated) {
         const updatedDiff = (today - dateUpdated) / (60 * 60 * 1000);
 

@@ -339,7 +339,7 @@
               <ThresholdSlider :countThreshold.sync="choroCountThreshold" :maxCount="choroMaxCount" />
             </div>
 
-            <ReportChoroplethCounties report="variant" class="mb-5" :data="choroData" :mutationName="reportName" :location="selectedLocation.label" :colorScale="choroColorScale" :countThreshold="choroCountThreshold" :setWidth="width" :abbloc="selectedLocation" :poly=shapeData />
+            <ReportChoroplethCounties report="variant" class="mb-5" :data="choroData" :mutationName="reportName" :location="selectedLocation.label" :colorScale="choroColorScale" :countThreshold="choroCountThreshold" :setWidth="width" :abbloc="selectedLocation" :poly="shapeData"/>
           </template>
 
           <ReportPrevalenceByLocation :data="choroData" :mutationName="reportName" :location="selected" :locationName="selectedLocation.label" class="mt-2" :colorScale="choroColorScale" />
@@ -362,11 +362,11 @@
 
         <div v-if="selectedLocation && selectedLocation.admin_level == 2">
           <template v-if="selectedLocation.admin_level == 2">
-            <div class="d-flex align-items-center justify-content-end mb-3 mt-2">
+            <div class="d-flex align-items-center justify-content-end mb-3 mt-2" v-if="$zipcodeFocus && selectedLocation == $zipcodeFocus">
               <router-link v-if="selectedLocation.id && selectedLocation.id != 'Worldwide'" class="btn btn-sec mr-3" :to="{name:'LocationReport', query:{loc: selectedLocation.id}}">View {{selectedLocation.label}} report</router-link>
               <Warning text="Estimates are biased by sampling <a href='#methods' class='text-light text-underline'>(read more)</a>" />
             </div>
-            <div class="d-flex flex-wrap">
+            <div class="d-flex flex-wrap" v-if="$zipcodeFocus && selectedLocation == $zipcodeFocus">
               <!-- Legend -->
               <div class="d-flex flex-wrap justify-content-around align-items-center" id="choropleth-legend">
                 <ClassedLegend :colorScale="choroColorScale" :label="`Est. ${ reportName } prevalence since identification`" :countThreshold="choroCountThreshold" :mutationName="mutationName" />
@@ -375,7 +375,7 @@
               <ThresholdSlider :countThreshold.sync="choroCountThreshold" :maxCount="choroMaxCount" />
             </div>
 
-            <ReportChoroplethZipcode report="variant" class="mb-5" :data="choroData" :mutationName="reportName" :location="selectedLocation.label" :colorScale="choroColorScale" :countThreshold="choroCountThreshold" :setWidth="width" :abbloc="selectedLocation" :poly=shapeData :outline=outlineData />
+            <ReportChoroplethZipcode report="variant" class="mb-5" :data="choroData" :mutationName="reportName" :location="selectedLocation.label" :colorScale="choroColorScale" :countThreshold="choroCountThreshold" :setWidth="width" :abbloc="selectedLocation" :poly="shapeData" :outline="outlineData" v-if="$zipcodeFocus && selectedLocation == $zipcodeFocus"/>
           </template>
 
           <ReportPrevalenceByLocation :data="choroData" :mutationName="reportName" :location="selected" :locationName="selectedLocation.label" class="mt-2" :colorScale="choroColorScale" />
@@ -478,7 +478,7 @@ import Vue from "vue";
 import uniq from "lodash/uniq";
 import isEqual from "lodash/isEqual";
 import debounce from "lodash/debounce";
-
+import json from "@/localConfig.json";
 import {
   scaleOrdinal
 } from "d3";
@@ -559,7 +559,7 @@ export default {
   },
   props: {
     alias: String,
-    loc: {type:[Array, String], default: "USA_US-CA_06073"},
+    loc: {type:[Array, String], default: json['locationFocus']},
     muts: [Array, String],
     pango: String,
     xmin: String,
@@ -570,7 +570,7 @@ export default {
     },
     selected: {
       type: String,
-      default: "USA_US-CA_06073"
+      default: json['locationFocus']
     }
   },
   computed: {
@@ -819,7 +819,7 @@ export default {
         }else if (this.loc){
             this.selected = this.loc;
         }else{
-            this.selected = "USA_US-CA_06073";
+            this.selected = json["locationFocus"];
         }
       }
       console.log('after', this.selected, this.loc); 
@@ -982,20 +982,23 @@ export default {
 
     updateMaps(){
         //if we have somehting other than SD County being passed, find it
-        if (this.selectedLocation.admin_level == 2 && this.selectedLocation.id === 'USA_US-CA_06073') {
+        if (this.selectedLocation.admin_level == 2 && this.selectedLocation.id === json['zipcodeFocus']) {
         this.zipcodeSubscription = getZipcodes(this.$genomicsurl, this.selectedLocation.id).subscribe(results => {
         this.zipcodes = results;
         })
-        this.shapeSubscription = getShapeData(this.$sdzipcodeapiurl, this.selectedLocation.id).subscribe(results => {
+        this.shapeSubscription = getShapeData(this.$zipcodesapiurl, this.selectedLocation.id).subscribe(results => {
             this.shapeData = results;
         })
-        this.shapiesSubscription = getShapeData(this.$shapeapiurl, 'USA_US-CA').subscribe(results => {
+        var zipcodeFocus = $zipcodeFocus.split("_").pop();
+        zipcodeFocus = zipcodeFocus.join("_");
+        this.shapiesSubscription = getShapeData(this.$shapeapiurl, zipcodeFocus).subscribe(results => {
             this.outlineData = results;
         })
       }
 
         if (this.selectedLocation.admin_level == 1) {
         this.shapiesSubscription = getShapeData(this.$shapeapiurl, this.selectedLocation.id).subscribe(results => {
+            
             this.shapeData = results;
         })
       }
@@ -1005,7 +1008,7 @@ export default {
     updateLocations() {
       // set default, if needed.
       if (!this.selected) {
-        this.selected = "USA_US-CA_06073";
+        this.selected = json["locationFocus"];
       }
       console.log("update locations"); 
       this.locationChangeSubscription = updateLocationData(this.$genomicsurl, this.alias, this.selectedMutationArr, this.lineageName, this.loc, this.selected, this.totalThresh).subscribe(results => {

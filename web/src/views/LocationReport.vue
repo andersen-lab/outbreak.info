@@ -285,7 +285,7 @@
         </section>      
 
        <!-- ZIPCODE -->
-       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2 && loc === 'USA_US-CA_06073'">
+       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2 && loc === locationFocus">
           <div class="d-flex flex-wrap justify-content-between align-items-center">
             <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
             <div class="d-flex align-items-center">
@@ -867,6 +867,7 @@ export default {
     setupReport() {
       this.basicSubscription = getBasicLocationReportData(this.$genomicsurl, this.loc).subscribe(results => {
         this.dateUpdated = results.dateUpdated.dateUpdated;
+        //console.log("HERE", results);
         this.lastUpdated = results.dateUpdated.lastUpdated;
         this.totalSequences = results.total;
         this.curatedLineages = results.curated;
@@ -1055,9 +1056,9 @@ export default {
       if (this.selectedLocation.admin_level == 1) {       
         this.shapesSubscription = getShapeData(this.$shapeapiurl, this.loc).subscribe(results => {
         this.shapeData = results;
-        console.log(this.shapeData, 'shapedata');
+        //console.log(this.shapeData, 'shapedata');
         this.shapeData.at(0).forEach(x => {
-            console.log(x._source.location);
+            //console.log(x._source.location);
             this.locationSubscription = getLocationIds(this.$genomicsurl, x._source.location).subscribe(r => {
                 console.log("here");
                 console.log(r);
@@ -1070,7 +1071,7 @@ export default {
       if (this.selectedLocation.admin_level <= 2){ 
         this.choroSubscription = getLocationMaps(this.$genomicsurl, this.loc, this.selectedMutations, this.recentWindow).subscribe(results => {
           this.geoData = results;
-          console.log(this.geoData, 'geo');
+          //console.log(this.geoData, 'geo');
           this.choroMaxCount = max(results.flatMap(d => d.values), d => d.cum_total_count);
         })
       }
