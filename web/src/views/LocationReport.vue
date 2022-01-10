@@ -522,6 +522,7 @@
 import Vue from "vue";
 import tippy from "tippy.js";
 import 'tippy.js/themes/material.css';
+import json from "@/localConfig.json";
 // --- font awesome --
 import {
   FontAwesomeIcon
@@ -1034,31 +1035,31 @@ export default {
       })
     },
     updateMaps() {
-      console.log(this.selectedLocation.admin_level);
-      if (this.selectedLocation.admin_level == 2 && this.loc === 'USA_US-CA_06073') {
+      //execute if we're at the right admin level and we have a zipcode focus
+      if (this.selectedLocation.admin_level == 2 && json['zipcodeFocus'] && this.loc === json['zipcodeFocus'] ) {
         this.zipcodeSubscription = getZipcodes(this.$genomicsurl, this.loc).subscribe(results => {
         this.zipcodes = results;
         })
-        this.shapeSubscription = getShapeData(this.$sdzipcodeapiurl, this.loc).subscribe(results => {
+        this.shapeSubscription = getShapeData(this.$zipcodesapiurl, this.loc).subscribe(results => {
             this.shapeData =results;
            
         })
-        this.shapiesSubscription = getShapeData(this.$shapeapiurl, 'USA_US-CA').subscribe(results => {
+        var zipcodeFocus = json['zipcodeFocus'].split("_").pop();
+        zipcodeFocus = zipcodeFocus.join("_");
+        this.shapiesSubscription = getShapeData(this.$shapeapiurl, zipcodeFocus).subscribe(results => {
             this.outlineData = results;
-            console.log(this.outlineData);
         })
  
       }
- 
-      if (this.selectedLocation.admin_level == 1) {
-        //we need to get the shape data, also all the location ids for future clicks
-        
+      //execute if we're at the state level
+      if (this.selectedLocation.admin_level == 1) {       
         this.shapesSubscription = getShapeData(this.$shapeapiurl, this.loc).subscribe(results => {
         this.shapeData = results;
+        console.log(this.shapeData, 'shapedata');
         this.shapeData.at(0).forEach(x => {
-            //console.log(x._source.location);
+            console.log(x._source.location);
             this.locationSubscription = getLocationIds(this.$genomicsurl, x._source.location).subscribe(r => {
-                //console.log("here");
+                console.log("here");
                 console.log(r);
             })
         })

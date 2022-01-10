@@ -11,12 +11,14 @@ import "tippy.js/dist/tippy.css";
 import json from "@/localConfig.json";
 Vue.config.productionTip = false;
 var siteUrl = json["siteUrl"]
+
 Vue.prototype.$apiurl = "http://" + siteUrl + ":9200/hcov19/";
 //Vue.prototype.$apiurl = "https://api.outbreak.info/covid19/";
 Vue.prototype.$resourceurl = "https://api.outbreak.info/resources/";
 //Vue.prototype.$genomicsurl = "https://api.outbreak.info/genomics/";
 Vue.prototype.$genomicsurl = "http://" + siteUrl + ":8000/hcov19/";
-console.log(Vue.prototype.$genomicsurl);
+Vue.prototype.$shapeapiurl = "http://" + siteUrl + ":8000/shape/";
+Vue.prototype.$zipcodesapiurl = "http://" + siteUrl + ":8000/zipcodes/";
 
 Vue.use(VueRx);
 Vue.use(VueCookies);

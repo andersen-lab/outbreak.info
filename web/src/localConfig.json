@@ -3,5 +3,8 @@
   "siteUrl": "kenny.scripps.edu",
   "locationFocus": "USA_US-CA_06073",
   "pathToZipcodes":"/home/chrissy/outbreak.info/CensusZip.geojson",
-  "cores":32
+  "zipcodeFocus":"USA_US-CA_06073",
+  "gitRepo":"https://github.com/andersen-lab/HCoV-19-Genomics",
+  "cores":32,
+  "gaTracking":"placeholder"
 }
