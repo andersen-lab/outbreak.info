@@ -33,7 +33,16 @@
             </div>
       </div>
     </div>
+    <div class="glance"/>
 
+      <div class="col-sm-12 my-5 justify-content-center align-items-center">
+        <div class="container text-left mb-5 font-size:24px justify-content-center">
+          <h1 class="text-highlight">How to cite outbreak.info</h1>
+          <CiteUs class="mt-3"/>
+        </div>
+      </div>
+    
+ 
     <!-- TEAM -->
     <div class="bg-light d-flex justify-content-center align-items-center">
       <div class="bg-light d-flex flex-column justify-content-center align-items-center w-75 border-top py-5">
@@ -110,6 +119,8 @@ import {
   getBasicLocationReportData,
 } from "@/api/genomics.js";
 import EmailSubscription from "@/components/EmailSubscription.vue";
+import CiteUs from "@/components/CiteUs.vue";
+
 import json from "@/localConfig.json";
 export default Vue.extend({
   name: "About",
@@ -118,6 +129,7 @@ export default Vue.extend({
   },
   components: {
     FontAwesomeIcon,
+    CiteUs
   },
   data() {
     return ({
@@ -187,7 +199,15 @@ export default Vue.extend({
    align-items: center;
    jusitfy-content: center;
 }
-
+.citeContainer{
+  align-items: center;  
+  margin-top: 25px;
+  margin-bottom: 25px;
+  margin-left: 25px;
+  margin-right:25px;
+  width:100%;
+  height:10%;
+ }
 .glance {
   margin-top: 25px;
   margin-bottom: 25px;
