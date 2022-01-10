@@ -19,6 +19,8 @@ Vue.prototype.$resourceurl = "https://api.outbreak.info/resources/";
 Vue.prototype.$genomicsurl = "http://" + siteUrl + ":8000/hcov19/";
 Vue.prototype.$shapeapiurl = "http://" + siteUrl + ":8000/shape/";
 Vue.prototype.$zipcodesapiurl = "http://" + siteUrl + ":8000/zipcodes/";
+Vue.prototype.$zipcodeFocus = json["zipcodeFocus"]
+
 
 Vue.use(VueRx);
 Vue.use(VueCookies);

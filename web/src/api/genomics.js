@@ -50,7 +50,7 @@ const formatDate = timeFormat("%e %B %Y");
 const formatDateTime = timeFormat("%e %B %Y %I:%M %p");
 const formatDateShort = timeFormat("%e %b %Y");
 const formatPercent = format(".0%");
-
+import json from "@/localConfig.json";
 import store from "@/store";
 
 function capitalize(value) {
@@ -409,7 +409,7 @@ function parseStrQuery(query) {
 
 // Report data for a Situation Report page.
 // Returns: date updated, location dictionary metadata, characteristic mutations, lineage/sublineage totals, lineage/sublineage prevalences over time, subnational data for choropleths.
-export function getReportData(apiurl, alias, locations, mutationArr, lineageString, location, totalThreshold, defaultLocations = ["USA_US-CA_06073"]) {
+export function getReportData(apiurl, alias, locations, mutationArr, lineageString, location, totalThreshold, defaultLocations = [json['locationFocus']]) {
   store.state.admin.reportloading = true;
   // clean up the locations data
   // ensure it's an array
