@@ -285,7 +285,7 @@
         </section>      
 
        <!-- ZIPCODE -->
-       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2 && loc === locationFocus">
+       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2">
           <div class="d-flex flex-wrap justify-content-between align-items-center">
             <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
             <div class="d-flex align-items-center">
@@ -1041,16 +1041,18 @@ export default {
         this.zipcodeSubscription = getZipcodes(this.$genomicsurl, this.loc).subscribe(results => {
         this.zipcodes = results;
         })
-        this.shapeSubscription = getShapeData(this.$zipcodesapiurl, this.loc).subscribe(results => {
+        this.shapeSubscription = getShapeData(this.$zipcodesapiurl, this.loc).subscribe(results => {   
             this.shapeData =results;
-           
+            
         })
-        var zipcodeFocus = json['zipcodeFocus'].split("_").pop();
+        
+        var zipcodeFocus = json['zipcodeFocus'].split("_")
+        zipcodeFocus.pop();
         zipcodeFocus = zipcodeFocus.join("_");
         this.shapiesSubscription = getShapeData(this.$shapeapiurl, zipcodeFocus).subscribe(results => {
             this.outlineData = results;
+            
         })
- 
       }
       //execute if we're at the state level
       if (this.selectedLocation.admin_level == 1) {       
@@ -1060,8 +1062,8 @@ export default {
         this.shapeData.at(0).forEach(x => {
             //console.log(x._source.location);
             this.locationSubscription = getLocationIds(this.$genomicsurl, x._source.location).subscribe(r => {
-                console.log("here");
-                console.log(r);
+                //console.log("here");
+                //console.log(r);
             })
         })
         
@@ -1071,7 +1073,7 @@ export default {
       if (this.selectedLocation.admin_level <= 2){ 
         this.choroSubscription = getLocationMaps(this.$genomicsurl, this.loc, this.selectedMutations, this.recentWindow).subscribe(results => {
           this.geoData = results;
-          //console.log(this.geoData, 'geo');
+          
           this.choroMaxCount = max(results.flatMap(d => d.values), d => d.cum_total_count);
         })
       }
