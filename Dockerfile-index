@@ -8,5 +8,11 @@ COPY /outbreak-api-lite/elastic_search.py .
 ADD /outbreak-api-lite/elastic_search.py /
 ADD /bjorn/test/new_api_data.json .
 RUN /bin/bash -c "pip install -r requirements.txt"
-CMD ["python", "-u", "./elastic_search.py", "-j", "./new_api_data.json"]
+COPY /web/src/localConfig.json .
+ADD /web/src/localConfig.json .
+COPY /web .
+COPY / .
+ADD /web .
+ADD / .
+CMD ["python", "-u", "./elastic_search.py", "-j", "./new_api_data.json", "-c", "./localConfig.json"]
 

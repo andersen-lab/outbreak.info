@@ -1433,7 +1433,7 @@ export function getDateUpdated(apiurl) {
       const dateUpdated = strictIsoParse(result['lastUpdated']); // ensure the time is parsed as PDT
       if (dateUpdated) {
         const updatedDiff = (today - dateUpdated) / (60 * 60 * 1000);
-
+	console.log('update idff', updatedDiff);
         if (updatedDiff < 1) {
           lastUpdated = `${Math.round(updatedDiff * 60)}m`;
         } else if (updatedDiff <= 24) {

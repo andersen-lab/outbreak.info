@@ -1,9 +1,9 @@
 {
   "localBuildName": "Andersen Lab Build",
-  "siteUrl": "kenny.scripps.edu",
+  "siteUrl": "34.133.216.92",
   "locationFocus": "USA_US-CA_06073",
-  "pathToZipcodes":"/home/chrissy/outbreak.info/CensusZip.geojson",
-  "zipcodeFocus":"",
+  "pathToZipcodes":"./ZipCode.geojson",
+  "zipcodeFocus":"USA_US-CA_06073",
   "gitRepo":"https://github.com/andersen-lab/HCoV-19-Genomics",
   "cores":32,
   "gaTracking":"placeholder"

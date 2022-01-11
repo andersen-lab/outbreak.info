@@ -20,7 +20,7 @@ clean:
 	docker rmi andersenlabapps/outbreak-info-tornado -f
 	docker rmi andersenlabapps/outbreak-info-es -f
 	docker rmi andersenlabapps/outbreak-info-ingest -f
-
+	docker container prune
 build-new-data:
 	docker-compose --profile new-data up --build
 
@@ -31,10 +31,10 @@ build-ingest:
 	docker-compose --profile ingest up --build
 
 run-ingest:
-	docker-compose --profile ingest-data up --build
+	docker-compose --profile ingest-data up
 
 build-website:
-	dcoker-compose --profile website up --build
+	docker-compose --profile website up --build
 
 run-website:
 	docker-compose --profile website up

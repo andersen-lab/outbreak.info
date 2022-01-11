@@ -75,7 +75,7 @@
       <div class="d-flex text-light xsmall">
         <ul class="m-0">
           <li class="d-inline m-3">
-            <router-link class="text-light" :to="{ name: 'Citation' }">How to Cite</router-link>
+            <router-link class="text-light" :to="{ name: 'About' }">How to Cite</router-link>
           </li>
           <li class="d-inline m-3">
             <router-link class="text-light" to="/privacy">Privacy Policy</router-link>
