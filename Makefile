@@ -21,6 +21,7 @@ clean:
 	docker rmi andersenlabapps/outbreak-info-es -f
 	docker rmi andersenlabapps/outbreak-info-ingest -f
 	docker container prune -f
+	docker volume rm outbreakinfo_data01
 build-new-data:
 	docker-compose --profile new-data up --build
 
