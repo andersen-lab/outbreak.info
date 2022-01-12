@@ -83,3 +83,4 @@
 network.host: 0.0.0.0
 #vm.max_map_count: 262 144
 discovery.type: single-node
+path.repo: /home/chrissy/backup
