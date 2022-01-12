@@ -190,6 +190,7 @@ export default {
         }
       );
     });
+    console.log("IN ZIP");
     this.chooseMap();
     // set initial dimensions for the choropleth plots.
     this.setDims();

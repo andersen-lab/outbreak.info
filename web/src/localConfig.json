@@ -1,6 +1,6 @@
 {
   "localBuildName": "Andersen Lab Build",
-  "siteUrl": "34.133.216.92",
+  "siteUrl": "kenny.scripps.edu",
   "locationFocus": "USA_US-CA_06073",
   "pathToZipcodes":"./ZipCode.geojson",
   "zipcodeFocus":"USA_US-CA_06073",

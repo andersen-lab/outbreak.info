@@ -1082,7 +1082,9 @@ export function getPrevalenceofCuratedLineages(apiurl, location, locations, line
 
 export function getShapeData(apiurl, location){
     let url;
+    //console.log('shape url', url);
     url = `${apiurl}shape?location_id=${location}`;    
+    console.log('shape url', url);
     return from(axios.get(url, {
     headers: {
       "Content-Type": "application/json"
