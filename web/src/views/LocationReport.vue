@@ -152,11 +152,22 @@
           </button>
         </a>
 
-        <a href="#geographic" v-if="geoData && selectedLocation.admin_level === 0">
+        <a href="#geographic" v-if="geoData && selectedLocation.admin_levels === 0">
           <button class="btn btn-grey mx-3 py-2">
             <small>Geographic breakdown</small>
           </button>
         </a>
+        <a href="#geographic-counties" v-if="geoData && selectedLocation.admin_levels === 1">
+          <button class="btn btn-grey mx-3 py-2">
+            <small>Geographic breakdown</small>
+          </button>
+        </a>
+         <a href="#geographic-zipcode" v-if="geoData && selectedLocation.admin_levels === 2">
+          <button class="btn btn-grey mx-3 py-2">
+            <small>Geographic breakdown</small>
+          </button>
+        </a>
+ 
       </div>
 
 
@@ -281,9 +292,138 @@
             <Warning class="fa-sm ml-3" text="Estimates are biased by sampling <a href='#methods' class='text-light text-underline'>(read more)</a>" />
           </div>
           <OverlayLineagePrevalence :options="selectedMutations" :xmin="xmin" :xmax="xmax" :seqCounts="seqCounts" :locationID="loc" :locationName="selectedLocation.label" :selected="selected" v-if="selectedMutations && selectedMutations.length" />
-        </section>
+        </section>      
 
-        <!-- GEOGRAPHIC CHOROPLETHS -->
+       <!-- ZIPCODE -->
+       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2">
+          <div class="d-flex flex-wrap justify-content-between align-items-center">
+            <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
+            <div class="d-flex align-items-center">
+            <Warning class="fa-sm ml-3" text="Estimates are biased by sampling <a href='#methods' class='text-light text-underline'>(read more)</a>" />
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap justify-content-center">
+            <div class="d-flex flex-wrap align-items-center border-top border-bottom bg-white pt-1 px-2 mt-1">
+              <ClassedLegend :colorScale="choroColorScale" :horizontal="false" :label="`Est. prevalence over the last ${recentWindow} days`" :countThreshold="choroCountThreshold" :mutationName="null" />
+              <div class="d-flex flex-column">
+                <ThresholdSlider :countThreshold.sync="choroCountThreshold" :maxCount="choroMaxCount" class="mr-3" />
+                <div class="d-flex align-items-center">
+                  <small>Show data from last</small>
+                  <input class="border p-1 mx-2" :style="{ 'border-color': '#bababa !important;', 'width': '40px'}" v-model="recentWindow" placeholder="days">
+                  <small>days</small>
+                </div>
+              </div>
+
+              <!-- Histogram of sequencing ZIPCODE LEVEL -->
+              <SequencingHistogram :data="seqCountsWindowed" :width="widthHist" :downward="false" :includeXAxis="true" :margin="marginHist" :mutationName="null" className="sequencing-histogram"
+                :title="`Samples sequenced per day over last ${recentWindow} days`" :onlyTotals="true" notDetectedColor="#bab0ab" v-if="seqCountsWindowed && !noRecentData" />
+
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap" v-if="geoData && selectedLocation.admin_level === 2">
+            <div v-for="(choro, cIdx) in geoData" :key="cIdx" class="my-3" :class="[mediumScreen ? 'w-100' : 'w-33']">
+              <div v-if="choro.values.length">
+                <div class="d-flex justify-content-between align-items-center mx-4">
+                  <router-link :to="{name: 'MutationReport', params: choro.params, query: { ... choro.route, loc: [loc], selected: loc }}">
+                    <h5>{{ choro.key }}</h5>
+                  </router-link>
+                  <small v-if="choro.variantType.includes('Variant') || choro.variantType.includes('Mutation')"
+                    :class="{ 'VOC': choro.variantType == 'Variant of Concern',  'VOI': choro.variantType == 'Variant of Interest', 'VUM': choro.variantType == 'Variant under Monitoring', 'MOC': choro.variantType == 'Mutation of Concern',  'MOI': choro.variantType == 'Mutation of Interest'}">
+                    {{ choro.variantType }}
+                  </small>
+                </div>
+                <ReportChoroplethZipcode report="location" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label"
+                  :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" :poly=shapeData :outline=outlineData />
+              </div>
+            </div>
+            <DownloadReportData :data="geoData" figureRef="geo-zipcode" dataType="Mutation Report Prevalence over Time" v-if="!noRecentData" />
+          </div>
+
+          <!-- no recent geo data -->
+          <div v-if="noRecentData" class="align-self-center text-muted">
+            <h4>No recent sequences found over the past {{recentWindow}} days</h4>
+            <p class="text-muted mb-0">
+              Try adjusting the most recent data window:
+            </p>
+            <div class="d-flex">
+              <div class="px-3 py-2 my-2 bg-white border-top border-bottom">
+                <small>Show data from last</small>
+                <input class="border p-1 mx-2" :style="{ 'border-color': '#bababa !important;', 'width': '40px'}" v-model="recentWindow" placeholder="days">
+                <small>days</small>
+              </div>
+            </div>
+          </div>
+
+       </section>
+
+
+       <!-- COUNTIES -->
+       <section id="geographic-counties" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 1">
+          <div class="d-flex flex-wrap justify-content-between align-items-center">
+            <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
+            <div class="d-flex align-items-center">
+            <Warning class="fa-sm ml-3" text="Estimates are biased by sampling <a href='#methods' class='text-light text-underline'>(read more)</a>" />
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap justify-content-center">
+            <div class="d-flex flex-wrap align-items-center border-top border-bottom bg-white pt-1 px-2 mt-1">
+              <ClassedLegend :colorScale="choroColorScale" :horizontal="false" :label="`Est. prevalence over the last ${recentWindow} days`" :countThreshold="choroCountThreshold" :mutationName="null" />
+              <div class="d-flex flex-column">
+                <ThresholdSlider :countThreshold.sync="choroCountThreshold" :maxCount="choroMaxCount" class="mr-3" />
+                <div class="d-flex align-items-center">
+                  <small>Show data from last</small>
+                  <input class="border p-1 mx-2" :style="{ 'border-color': '#bababa !important;', 'width': '40px'}" v-model="recentWindow" placeholder="days">
+                  <small>days</small>
+                </div>
+              </div>
+
+              <!-- Histogram of sequencing COUNTY LEVEL -->
+              <SequencingHistogram :data="seqCountsWindowed" :width="widthHist" :downward="false" :includeXAxis="true" :margin="marginHist" :mutationName="null" className="sequencing-histogram"
+                :title="`Samples sequenced per day over last ${recentWindow} days`" :onlyTotals="true" notDetectedColor="#bab0ab" v-if="seqCountsWindowed && !noRecentData" />
+
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap" v-if="geoData && selectedLocation.admin_level === 1">
+            <div v-for="(choro, cIdx) in geoData" :key="cIdx" class="my-3" :class="[mediumScreen ? 'w-100' : 'w-33']">
+              <div v-if="choro.values.length">
+                <div class="d-flex justify-content-between align-items-center mx-4">
+                  <router-link :to="{name: 'MutationReport', params: choro.params, query: { ... choro.route, loc: [loc], selected: loc }}">
+                    <h5>{{ choro.key }}</h5>
+                  </router-link>
+                  <small v-if="choro.variantType.includes('Variant') || choro.variantType.includes('Mutation')"
+                    :class="{ 'VOC': choro.variantType == 'Variant of Concern',  'VOI': choro.variantType == 'Variant of Interest', 'VUM': choro.variantType == 'Variant under Monitoring', 'MOC': choro.variantType == 'Mutation of Concern',  'MOI': choro.variantType == 'Mutation of Interest'}">
+                    {{ choro.variantType }}
+                  </small>
+                </div>
+                <ReportChoroplethCounties report="location" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label"
+                  :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" :poly=shapeData />
+              </div>
+            </div>
+            <DownloadReportData :data="geoData" figureRef="geo-counties" dataType="Mutation Report Prevalence over Time" v-if="!noRecentData" />
+          </div>
+
+          <!-- no recent geo data -->
+          <div v-if="noRecentData" class="align-self-center text-muted">
+            <h4>No recent sequences found over the past {{recentWindow}} days</h4>
+            <p class="text-muted mb-0">
+              Try adjusting the most recent data window:
+            </p>
+            <div class="d-flex">
+              <div class="px-3 py-2 my-2 bg-white border-top border-bottom">
+                <small>Show data from last</small>
+                <input class="border p-1 mx-2" :style="{ 'border-color': '#bababa !important;', 'width': '40px'}" v-model="recentWindow" placeholder="days">
+                <small>days</small>
+              </div>
+            </div>
+          </div>
+
+       </section>
+
+       <!-- GEOGRAPHIC CHOROPLETHS -->
         <section id="geographic" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 0">
           <div class="d-flex flex-wrap justify-content-between align-items-center">
             <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
@@ -314,21 +454,20 @@
             </div>
           </div>
 
-          <div class="d-flex flex-wrap" v-if="geoData">
+          <div class="d-flex flex-wrap" v-if="geoData && selectedLocation.admin_level === 0">
             <div v-for="(choro, cIdx) in geoData" :key="cIdx" class="my-3" :class="[mediumScreen ? 'w-100' : 'w-33']">
               <div v-if="choro.values.length">
                 <div class="d-flex justify-content-between align-items-center mx-4">
                   <router-link :to="{name: 'MutationReport', params: choro.params, query: { ... choro.route, loc: [loc], selected: loc }}">
                     <h5>{{ choro.key }}</h5>
                   </router-link>
-
                   <small v-if="choro.variantType.includes('Variant') || choro.variantType.includes('Mutation')"
                     :class="{ 'VOC': choro.variantType == 'Variant of Concern',  'VOI': choro.variantType == 'Variant of Interest', 'VUM': choro.variantType == 'Variant under Monitoring', 'MOC': choro.variantType == 'Mutation of Concern',  'MOI': choro.variantType == 'Mutation of Interest'}">
                     {{ choro.variantType }}
                   </small>
                 </div>
                 <ReportChoropleth report="location" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label"
-                  :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" />
+                  :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" />
               </div>
             </div>
             <DownloadReportData :data="geoData" figureRef="report-choropleth" dataType="Variant Report Prevalence over Time" v-if="!noRecentData" />
@@ -391,10 +530,9 @@
 
 <script>
 import Vue from "vue";
-
 import tippy from "tippy.js";
 import 'tippy.js/themes/material.css';
-
+import json from "@/localConfig.json";
 // --- font awesome --
 import {
   FontAwesomeIcon
@@ -423,16 +561,11 @@ import {
 import {
   faSync
 } from "@fortawesome/free-solid-svg-icons/faSync";
-
 library.add(faClock, faSpinner, faSync, faInfoCircle, faArrowLeft, faPlus, faTimesCircle);
-
-
 import debounce from "lodash/debounce";
-
 import {
   mapState
 } from "vuex";
-
 import {
   max,
   timeFormat,
@@ -444,27 +577,26 @@ import {
   extent,
   format
 } from "d3";
-
 import {
   schemeYlGnBu,
   interpolateRdPu
 } from "d3-scale-chromatic";
-
 import {
   getLocationReportData,
   getSequenceCount,
   getLocationMaps,
+  getShapeData,
+  getLocationIds,
+  getZipcodes,
   getBasicLocationReportData,
   getLocationTable,
   findLocation,
   getBadMutations,
   findWHOLineage
 } from "@/api/genomics.js";
-
 import cloneDeep from "lodash/cloneDeep";
 import uniq from "lodash/uniq";
 import uniqBy from "lodash/uniqBy";
-
 export default {
   name: "LocationReport",
   props: {
@@ -491,6 +623,8 @@ export default {
     ReportAcknowledgements: () => import( /* webpackPrefetch: true */ "@/components/ReportAcknowledgements.vue"),
     ShareReport: () => import( /* webpackPrefetch: true */ "@/components/ShareReport.vue"),
     ReportChoropleth: () => import( /* webpackPrefetch: true */ "@/components/ReportChoropleth.vue"),
+    ReportChoroplethCounties: () => import( /* webpackPrefetch: true */ "@/components/ReportChoroplethCounties.vue"),
+    ReportChoroplethZipcode: () => import( /* webpackPrefetch: true */ "@/components/ReportChoroplethZipcode.vue"),
     LineagesByLocation: () => import( /* webpackPrefetch: true */ "@/components/LineagesByLocation.vue"),
     ReportStackedBarGraph: () => import( /* webpackPrefetch: true */ "@/components/ReportStackedBarGraph.vue"),
     HorizontalCategoricalLegend: () => import( /* webpackPrefetch: true */ "@/components/HorizontalCategoricalLegend.vue"),
@@ -593,7 +727,6 @@ export default {
           tracked.push(...curatedQuery);
         }
       }
-
       if (this.pango) {
         if (typeof(this.pango) == "string") {
           tracked.push({
@@ -700,35 +833,26 @@ export default {
   },
   mounted() {
     this.darkMode = this.dark == "true" || !!(this.dark) && this.dark != "false";
-
     const ofInterest = getBadMutations(true);
     this.moc = ofInterest.moc;
     this.moi = ofInterest.moi;
-
     this.queryLocation = findLocation;
     this.choroColorScale = scaleThreshold(schemeYlGnBu[this.choroColorDomain.length + 2])
       .domain(this.choroColorDomain);
-
     this.customMutations = this.grabCustomMutations();
-
     const formatDate = timeFormat("%e %B %Y");
     this.currentTime = new Date();
     this.today = formatDate(this.currentTime);
-
-
     this.$nextTick(function() {
       // resize listener
       window.addEventListener("resize", this.setDims);
       this.setDims;
-
       // set URL for sharing, etc.
       const location = window.location;
       this.url = location.search !== "" ? `${location.origin}${location.pathname}${location.search}` : `${location.origin}${location.pathname}`;
     })
-
     // intial setup
     this.setDims();
-
     this.setupReport();
   },
   updated() {
@@ -753,6 +877,7 @@ export default {
     setupReport() {
       this.basicSubscription = getBasicLocationReportData(this.$genomicsurl, this.loc).subscribe(results => {
         this.dateUpdated = results.dateUpdated.dateUpdated;
+        //console.log("HERE", results);
         this.lastUpdated = results.dateUpdated.lastUpdated;
         this.totalSequences = results.total;
         this.curatedLineages = results.curated;
@@ -760,11 +885,9 @@ export default {
         this.voi = results.voi;
         this.selectedLocation = results.location;
       })
-
       this.reportSubscription = getLocationReportData(this.$genomicsurl, this.loc, this.muts, this.pango, this.otherThresh, this.ndayThresh, this.dayThresh, this.recentWindow).subscribe(results => {
         this.lineagesByDay = results.lineagesByDay;
         this.noRecentData = results.mostRecentLineages && results.mostRecentLineages.length ? false : true;
-
         this.mostRecentLineages = results.mostRecentLineages;
         this.lineageDomain = results.lineageDomain;
         this.colorScale = scaleOrdinal(this.colorPalette).domain(this.lineageDomain);
@@ -772,7 +895,6 @@ export default {
         this.recentHeatmap = results.heatmap.characteristic.data;
         this.mostRecentDomain = results.heatmap.characteristic.yDomain;
       })
-
       this.updateSequenceCount();
     },
     createReport() {
@@ -871,12 +993,9 @@ export default {
       }
       let alias = this.customMutations.filter(d => d.type == "alias").map(d => d.qParam);
       let pango = this.customMutations.filter(d => d.type == "pango").map(d => d.qParam);
-
       const variant = this.customMutations.filter(d => d.type == "variant").map(d => d.qParam);
       const mutation = this.customMutations.filter(d => d.type == "mutation").map(d => d.qParam);
-
       let selected = this.customMutations.map(d => d.label).concat(this.selected);
-
       if (this.newVariant) {
         if (typeof(this.selected) == "string") {
           selected = [this.selected, this.newVariant.label];
@@ -884,10 +1003,8 @@ export default {
           selected.push(this.newVariant.label);
         }
       };
-
       // clear new additions
       this.submitCount += 1;
-
       this.$router.push({
         name: "LocationReport",
         query: {
@@ -929,10 +1046,44 @@ export default {
       })
     },
     updateMaps() {
-      if (this.selectedLocation.admin_level === 0) {
+      //execute if we're at the right admin level and we have a zipcode focus
+      if (this.selectedLocation.admin_level == 2 && json['zipcodeFocus'] && this.loc === json['zipcodeFocus'] ) {
+        this.zipcodeSubscription = getZipcodes(this.$genomicsurl, this.loc).subscribe(results => {
+        this.zipcodes = results;
+        })
+        this.shapeSubscription = getShapeData(this.$zipcodesapiurl, this.loc).subscribe(results => {   
+            this.shapeData =results;
+            
+        })
+        
+        var zipcodeFocus = json['zipcodeFocus'].split("_")
+        zipcodeFocus.pop();
+        zipcodeFocus = zipcodeFocus.join("_");
+        this.shapiesSubscription = getShapeData(this.$shapeapiurl, zipcodeFocus).subscribe(results => {
+            this.outlineData = results;
+            
+        })
+      }
+      //execute if we're at the state level
+      if (this.selectedLocation.admin_level == 1) {       
+        this.shapesSubscription = getShapeData(this.$shapeapiurl, this.loc).subscribe(results => {
+        this.shapeData = results;
+        //console.log(this.shapeData, 'shapedata');
+        this.shapeData.at(0).forEach(x => {
+            //console.log(x._source.location);
+            this.locationSubscription = getLocationIds(this.$genomicsurl, x._source.location).subscribe(r => {
+                //console.log("here");
+                //console.log(r);
+            })
+        })
+        
+        })       
+
+      }
+      if (this.selectedLocation.admin_level <= 2){ 
         this.choroSubscription = getLocationMaps(this.$genomicsurl, this.loc, this.selectedMutations, this.recentWindow).subscribe(results => {
           this.geoData = results;
-
+          
           this.choroMaxCount = max(results.flatMap(d => d.values), d => d.cum_total_count);
         })
       }
@@ -955,6 +1106,8 @@ export default {
       basicSubscription: null,
       reportSubscription: null,
       choroSubscription: null,
+      shapesSubscription: null,
+      locationSubscription: null,
       tableSubscription: null,
       countSubscription: null,
       // methods
@@ -992,6 +1145,8 @@ export default {
       heatmapColorScale: scaleSequential(interpolateRdPu),
       mostRecentDomain: null,
       geoData: null,
+      outlineData: null,
+      shapeData: null,
       seqCounts: null,
       widthHist: 300,
       marginHist: {
@@ -1066,19 +1221,18 @@ export default {
     if (this.basicSubscription) {
       this.basicSubscription.unsubscribe();
     }
-
     if (this.reportSubscription) {
       this.reportSubscription.unsubscribe();
     }
-
     if (this.choroSubscription) {
       this.choroSubscription.unsubscribe();
     }
-
+    if (this.shapesSubscription) {
+      this.shapesSubscription.unsubscribe();
+    }
     if (this.tableSubscription) {
       this.tableSubscription.unsubscribe();
     }
-
     if (this.countSubscription) {
       this.countSubscription.unsubscribe();
     }
@@ -1087,19 +1241,19 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.gisaid {
+    height: 25px;
+}
 .font-size-small {
     font-size: small;
 }
-
 .btn-active {
     background-color: $primary-color;
     color: white;
 }
-
 .w-33 {
     width: 33% !important;
 }
-
 .w-75px {
     width: 75px !important;
 }

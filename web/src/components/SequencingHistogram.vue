@@ -65,6 +65,14 @@ export default Vue.extend({
     data: Array,
     mutationName: String,
     svgTitle: String,
+    axisScale: {
+      type: Number,
+      default:null
+    },
+    allowDetected: {
+      type: Boolean,
+      default: true
+    },
     title: {
       type: String,
       default: "Total samples sequenced per day"
@@ -135,6 +143,7 @@ export default Vue.extend({
     },
   },
   mounted() {
+    //console.log("HERE IN SEEEE", this.data);
     this.setupPlot();
     this.updatePlot();
   },
@@ -150,8 +159,12 @@ export default Vue.extend({
       } else {
         this.x = this.xInput;
       }
-
-      this.maxCounts = max(this.data, d => d[this.totalVariable]);
+    
+      if (this.axisScale){
+        this.maxCounts = this.axisScale;
+      } else{
+        this.maxCounts = max(this.data, d => d[this.totalVariable]);
+      }
       if (this.downward) {
         this.y = scaleLinear()
           .range([0, this.height - this.margin.top - this.margin.bottom])
@@ -239,7 +252,7 @@ export default Vue.extend({
         const detectedSelector = this.counts
           .selectAll(".detected")
           .data(detected);
-
+        if (this.allowDetected){
         detectedSelector.join(
           enter => {
             enter.append("text")
@@ -267,7 +280,7 @@ export default Vue.extend({
             .remove()
           )
         )
-
+        }
         const countSelector = this.counts
           .selectAll(".raw-counts")
           .data(this.data);

@@ -1,7 +1,7 @@
 <template>
-<div class="d-flex flex-column align-items-center w-100" id="report-choropleth">
+<div class="d-flex flex-column align-items-center w-100" id="geo-zipcode">
   <!-- choropleth -->
-  <svg :width="width" :height="height" ref="choropleth" class="report-choropleth mt-3" :subtitle="subtitle" :name="title" :class="{'hidden': noMap}" style="background: aliceblue;">
+  <svg :width="width" :height="height" ref="geo-zipcode" class="geo-zipcode mt-3" :subtitle="subtitle" :name="title" :class="{'hidden': noMap}" style="background: aliceblue;">
     <defs>
       <pattern id="diagonalHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
         <line x1="0" y1="0" x2="0" y2="10" :style="`stroke:${strokeColor}; stroke-width:0.75`" />
@@ -24,7 +24,7 @@
   </div>
 
   <div class="w-75" v-if="showCopy && !noMap">
-    <DownloadReportData :data="data" figureRef="report-choropleth" dataType="Mutation Report Choropleth" />
+    <DownloadReportData :data="data" figureRef="geo-zipcode" dataType="Mutation Report Choropleth" />
   </div>
 
 </div>
@@ -49,20 +49,21 @@ import {
   select,
   selectAll
 } from "d3";
-import ADMIN0_SIMPLE from "@/assets/geo/gadm_adm0_simplified.json";
-import ADMIN0 from "@/assets/geo/gadm_adm0.json";
-import USADATA from "@/assets/geo/US_states.json";
 import ADMIN1 from "@/assets/geo/gadm_adm1_simplified.json";
+import USADATA from "@/assets/geo/US_states.json";
 export default {
   name: "ReportChoropleth",
   props: {
     data: Array,
+    outline: Array,
+    abbloc: String,
+    poly: Array,
     mutationName: String,
     report: String,
     fillMax: Number,
     location: {
       type: String,
-      default: "Worldwide"
+      default: "United States"
     },
     showLegend: {
       type: Boolean,
@@ -189,6 +190,7 @@ export default {
         }
       );
     });
+    console.log("IN ZIP");
     this.chooseMap();
     // set initial dimensions for the choropleth plots.
     this.setDims();
@@ -198,7 +200,7 @@ export default {
     setDims() {
       const mx = 0.8;
       const my = 0.85;
-      const svgContainer = document.getElementById('report-choropleth');
+      const svgContainer = document.getElementById('geo-zipcode');
       let maxSvgWidth = svgContainer ? svgContainer.offsetWidth * mx : 800;
       const maxWidth = window.innerWidth;
       const maxHeight = window.innerHeight * my;
@@ -215,33 +217,33 @@ export default {
       }
     },
     chooseMap() {
-      if (this.location === "Worldwide") {
-        this.projection = geoEqualEarth()
-          .center([11.05125, 7.528635]) // so this should be calcuable from the bounds of the geojson, but it's being weird, and it's constant for the ADMIN1 anyway...
-          .scale(1)
-          .translate([this.width / 2, this.height / 2]);
-        this.locationMap = cloneDeep(ADMIN0_SIMPLE);
-        // this.hwRatio = 0.45;
-        // this.setDims();
-      } else if (this.location === "United States" || this.location === "USA") {
-        this.projection = geoAlbersUsa()
-          .scale(1)
-          .translate([this.width / 2, this.height / 2]);
-        this.locationMap = cloneDeep(USADATA);
-        // this.hwRatio = 0.45;
-        // this.setDims();
-      } else {
-        this.locationMap = cloneDeep(ADMIN1[this.location]);
-        const mapBounds = geoBounds(this.locationMap);
-        this.projection = geoAzimuthalEqualArea()
-          .center([0, 0])
-          .rotate([(mapBounds[0][0] + mapBounds[1][0]) * -0.5, (mapBounds[0][1] + mapBounds[1][1]) * -0.5])
-          .scale(1)
-          .translate([this.width / 2, this.height / 2]);
-        // const mapRatio = Math.abs(mapBounds[0][1] - mapBounds[1][1]) / Math.abs(mapBounds[0][0] - mapBounds[1][0]);
-        // this.hwRatio = mapRatio;
-        // this.setDims();
-      }
+        //console.log("In Choose Map");
+        var division = this.location.split(",").at(-2).trim();
+        var loc = this.location.split(",").at(-3).trim();
+        var country = this.location.split(",").at(-1).trim();
+        var featCollection = [];
+        for (var x of Object.entries(this.poly.at(0))){
+          featCollection.push(JSON.parse(x.at(1)._source.shape));
+        }
+        let json = {type:"FeatureCollection", features: featCollection};
+        this.featureCollection = json;
+        for (var y of Object.entries(this.outline.at(0))){
+            var temp_loc = y.at(1)._source["location"];
+            if (temp_loc === loc){
+                this.locationMap = JSON.parse(y.at(1)._source.shape);
+                const mapBounds = geoBounds(this.locationMap);
+                //console.log(this.path.bounds(this.locationMap));
+                var height = mapBounds[1][0] - mapBounds[0][0];
+                var width = mapBounds[1][1] - mapBounds[0][1];
+                
+                this.hwRatio = height/width;
+                this.projection = geoAzimuthalEqualArea()
+                  .center([0, 0])
+                  .rotate([(mapBounds[0][0] + mapBounds[1][0]) * -0.5, (mapBounds[0][1] + mapBounds[1][1]) * -0.5])
+                  .scale(1)
+                  .translate([this.width / 2, this.height / 2]);
+            }
+        } 
     },
     setupChoro() {
       this.svg = select(this.$refs.svg);
@@ -267,39 +269,59 @@ export default {
         xscale = this.width / dx * 0.98,
         yscale = this.height / dy * 0.98,
         scale = min([xscale, yscale]);
+      
       this.projection = this.projection
         .scale(scale);
-      this.filteredData = this.locationMap.features;
+      //this.filteredData = this.locationMap.features;
     },
-    prepData() {
-      if (this.data && this.locationMap) {
+    prepData(){
+    if (this.data) {
         // Update projection / scales
+        console.log("In Prep Data", this.data);
         this.updateProjection();
-        this.filteredData.forEach(d => {
-          const filtered = this.data.filter(seq => seq.name.toLowerCase() == d.properties.NAME.toLowerCase());
-          if (filtered.length > 0) {
-            filtered.sort((a,b) => b.cum_total_count - a.cum_total_count)
-            const seq = filtered[0];
-            d[this.variable] = seq[this.variable];
-            // filter values with too few values
-            d["fill"] = seq.cum_total_count >= this.countThreshold ? this.colorScale(d[this.variable]) : this.filteredColor;
-            d["id"] = seq.id;
-            d["lower"] = seq.proportion_ci_lower;
-            d["upper"] = seq.proportion_ci_upper;
-            d["cum_lineage_count"] = seq["cum_lineage_count"];
-            d["cum_total_count"] = seq["cum_total_count"];
-            d["proportion_formatted"] = seq.proportion_formatted;
-          } else {
-            d["id"] = null;
-            d["fill"] = null;
-            d["lower"] = null
-            d["upper"] = null
-            d["cum_lineage_count"] = null;
-            d["cum_total_count"] = null;
-            d["proportion_formatted"] = null;
-          }
-        });
-        this.noMap = false;
+        this.filteredData = [];
+        for (var x of Object.entries(this.poly.at(0))){
+            const parsedGeoJson = JSON.parse(x.at(1)._source.shape);
+            const l = x.at(1)._source.zipcode;
+            let location = x.at(1)._source.zipcode.toString();
+            var found = false;
+            
+            //loop over property information
+            for (var y of Object.entries(this.data)){
+                //console.log(y);                
+                var count_loc = y.at(1)['location_id'];
+                //console.log(count_loc, location);
+                if (count_loc === location){
+                    found = true;       
+                    parsedGeoJson['zipcode_name'] = x.at(1)._source.zipcode_name;
+                    parsedGeoJson['properties'] = {'proportion': y.at(1)['proportion']};
+                    //console.log(this.colorScale(y.at(1)['proportion']));
+                    parsedGeoJson['fill'] = this.colorScale(y.at(1)['proportion']);
+                    parsedGeoJson["id"] = l.toString();
+                    parsedGeoJson['proportion'] = y.at(1)['proportion'];
+                    parsedGeoJson['cum_lineage_count'] = y.at(1)['cum_lineage_count'];
+                    parsedGeoJson['proportion_formatted'] = y.at(1)['proportion_formatted'];
+                    parsedGeoJson['cum_total_count'] = y.at(1)['cum_total_count'];
+                    console.log('h');
+                }
+            }
+            if (found === false){
+                parsedGeoJson['properties'] = {'proportion': -1};
+                parsedGeoJson["id"] = null;
+                parsedGeoJson['zipcode_name'] = null;
+                parsedGeoJson["cum_lineage_count"]=null;
+                parsedGeoJson["proportion_formatted"] = null;
+                parsedGeoJson["cum_total_count"]=null;
+                //parsedGeoJson["proportion"] = -1;
+            }
+            parsedGeoJson['lower'] = null;
+            parsedGeoJson["upper"] = null;
+            parsedGeoJson['properties']['location_id'] = l.toString();
+            this.filteredData.push(JSON.parse(JSON.stringify(parsedGeoJson)));
+            //console.log(this.filteredData);
+            //this.filteredData.push(parsedGeoJson);
+        }
+       this.noMap = false;
       } else {
         this.filteredData = null;
         this.noMap = true;
@@ -307,18 +329,17 @@ export default {
     },
     drawMap() {
       this.prepData();
+      const basemapData = [];
       if (this.filteredData) {
-        const basemapData = this.location == "Worldwide" || this.location == "United States" ? [] : ADMIN0.features.filter(d => d.properties.NAME != this.location);
-        //console.log(this.projection);
         this.basemap
           .selectAll(".basemap")
-          .data(basemapData, d => d.properties.location_id)
+          .data(this.filteredData, d => d.properties.location_id)
           .join(
             enter => {
               enter
                 .append("path")
                 .attr("class", "basemap")
-                .attr("id", d => d.properties.location_id)
+                .attr("id", d => d.zipcode_name + d.properties.location_id)
                 // draw each region
                 .attr("d", this.path
                   .projection(this.projection)
@@ -328,30 +349,33 @@ export default {
                 .style("stroke-width", 0.25)
             },
             update => update
-            .attr("id", d => d.properties.location_id)
+            .attr("id", d => d.zipcode_name + d.properties.location_id)
             // draw each region
             .attr("d", this.path
               .projection(this.projection)
-            ),
+            )
+            .transition(250)
+            .duration(210)
+            .style("fill", d => d.fill ? d.fill : this.nullColor),
             exit =>
             exit.call(exit =>
               exit
               .transition()
-              .duration(10)
+              .duration(250)
               .style("opacity", 1e-5)
               .remove()
             )
           )
-        console.log(this.path);
+        //console.log(this.filteredData); 
         this.regions
           .selectAll(".region-fill")
-          .data(this.filteredData)
+          .data(this.filteredData.filter(d => d.properties.proportion >0, d => d.properties.location_id))
           .join(
             enter => {
               enter
                 .append("path")
-                .attr("class", d => `${d.properties.location_id} region region-fill`)
-                .attr("id", d => d.properties.location_id)
+                .attr("class", d => d.zipcode_name + d.properties.location_id + " region region-fill")
+                .attr("id", d => d.zipcode_name + d.properties.location_id)
                 // draw each region
                 .attr("d", this.path
                   .projection(this.projection)
@@ -363,8 +387,8 @@ export default {
                 .style("stroke-width", 0.5)
             },
             update => update
-            .attr("class", d => `${d.properties.location_id} region region-fill`)
-            .attr("id", d => d.properties.location_id)
+            .attr("class", d => d.zipcode_name + d.properties.location_id+ " region region-fill")
+            .attr("id", d => d.zipcode_name + d.properties.location_id)
             .on("click", d => this.route2Location(d.id))
             // draw each region
             .attr("d", this.path
@@ -382,17 +406,19 @@ export default {
               .remove()
             )
           )
-        console.log(this.filteredData);
+         
+        //console.log(this.filteredData);
         // highlight where the data is 0.
+        
         this.regions
           .selectAll(".zero-data")
-          .data(this.filteredData.filter(d => d.proportion === 0), d => d.properties.location_id)
+          .data(this.filteredData.filter(d => d.properties.proportion === 0), d => d.properties.location_id)
           .join(
             enter => {
               enter
                 .append("path")
-                .attr("class", d => `${d.properties.location_id} region zero-data`)
-                .attr("id", d => `${d.properties.location_id}_zero`)
+                .attr("class", d => d.zipcode_name + d.properties.location_id + " region zero-data")
+                .attr("id", d => d.zipcode_name + d.properties.location_id + "_zero")
                 // draw each region
                 .attr("d", this.path
                   .projection(this.projection)
@@ -402,8 +428,8 @@ export default {
                 .style("stroke-width", 0.5)
             },
             update => update
-            .attr("class", d => `${d.properties.location_id} region zero-data`)
-            .attr("id", d => `${d.properties.location_id}_zero`)
+            .attr("class", d => d.zipcode_name + d.properties.location_id + " region zero-data")
+            .attr("id", d => d.zipcode_name + d.properties.location_id + '_zero')
             // draw each region
             .attr("d", this.path
               .projection(this.projection)
@@ -418,44 +444,12 @@ export default {
             )
           )
         
-        this.overlay
-          .selectAll(".overlay")
-          .data(ADMIN0.features.filter(d => d.properties.NAME == this.location && d.properties.NAME != "United States"), d => d.properties.location_id)
-          .join(
-            enter => {
-              enter
-                .append("path")
-                .attr("class", "overlay")
-                .attr("id", d => d.properties.location_id)
-                // draw each region
-                .attr("d", this.path
-                  .projection(this.projection)
-                )
-                .style("fill", "none")
-                .style("stroke", this.strokeColor)
-                .style("stroke-width", 1.25)
-            },
-            update => update
-            .attr("id", d => d.properties.location_id)
-            // draw each region
-            .attr("d", this.path
-              .projection(this.projection)
-            ),
-            exit =>
-            exit.call(exit =>
-              exit
-              .transition()
-              .duration(10)
-              .style("opacity", 1e-5)
-              .remove()
-            )
-          )
         this.regions.selectAll("path.region")
           .on("mouseenter", d => this.debounceMouseon(d))
           .on("mouseleave", this.mouseOff);
         this.regions.selectAll("path.region")
           .on("mouseenter", d => this.debounceMouseon(d))
-          .on("mouseleave", this.mouseOff);
+          .on("mouseleave", this.mouseOff); 
       }
     },
     mouseOn(d) {
@@ -465,15 +459,19 @@ export default {
         .selectAll(".region")
         .style("opacity", 0.2)
         .style("stroke-opacity", 0.5);
+     
+      let stringrep = d.zipcode_name + d.properties.location_id; 
       // turn on the location
       this.regions
-        .select(`.${d.properties.location_id}`)
+        .select(`.${stringrep}`)
         .style("opacity", 1)
-        .style("stroke-opacity", 1);
+        .style("stroke-opacity", 1); 
+      //console.log(this.regions); 
       const ttip = select(this.$refs.tooltip_choro);
       // edit text
-      ttip.select("h5").text(d.properties.NAME);
-      if (d.proportion || d.proportion === 0) {
+      //console.log(ttip.select("h5"));
+      ttip.select("h5").text(d.properties.location_id + " " + d.zipcode_name);
+      if (d.proportion || d.proportion === -1) {
         ttip.select("#no-sequencing").classed("hidden", true);
         ttip.select("#proportion")
           .text(`${d.proportion_formatted} ${this.mutationName}`)
@@ -499,15 +497,16 @@ export default {
     mouseOff() {
       select(this.$refs.tooltip_choro)
         .style("display", "none");
-      this.regions
-        .selectAll(".zero-data")
-        .style("opacity", 1);
+      //this.regions
+     //   .selectAll(".zero-data")
+     //   .style("opacity", 1);
       this.regions
         .selectAll(".region")
         .style("opacity", 1)
         .style("stroke-opacity", 1);
     },
     route2Location(id) {
+      //console.log("in route");
       if (this.report == "variant") {
         const query = this.$route.query;
         const params = this.$route.params;
@@ -527,11 +526,12 @@ export default {
           }
         })
       } else if (this.report == "location") {
+        //console.log("in other route", id, this.abbloc);
         const query = this.$route.query;
         this.$router.push({
           name: "LocationReport",
           query: {
-            loc: id,
+            loc: this.abbloc + "_" + id,
             muts: query.muts,
             alias: query.alias,
             pango: query.pango,

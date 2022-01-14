@@ -1,0 +1,6 @@
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.16.1
+MAINTAINER Chrissy Aceves "caceves@scripps.edu"
+EXPOSE 9200
+EXPOSE 9300
+RUN echo "discovery.type: single-node" >> /usr/share/elasticsearch/config/elasticsearch.yml
+

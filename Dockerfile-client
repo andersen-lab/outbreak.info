@@ -1,0 +1,10 @@
+FROM node:11.12.0-alpine
+MAINTAINER Chrissy Aceves "caceves@scripps.edu"
+RUN apk update && apk add python make g++
+WORKDIR /web
+COPY /web/package*.json ./
+RUN npm install
+COPY /web .
+EXPOSE 5000
+CMD ["npm", "run", "serve", "--", "--port", "5000"]
+

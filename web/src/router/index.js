@@ -7,6 +7,19 @@ Vue.use(VueRouter);
 
 const routes = [
   {
+    path: "/about",
+    name: "About",
+    component: () =>
+      import( /* webpackChunkName: "about" */ "../views/About.vue")
+  },
+  {
+    path: "/",
+    name: "Home",
+    component: () =>
+      import( /* webpackChunkName: "home" */ "../views/Home.vue")
+  },
+
+  {
     path: "/privacy",
     name: "Privacy",
     component: () =>
@@ -117,7 +130,7 @@ const routes = [
       import( /* webpackChunkName: "summary" */ "../views/Summary.vue")
   },
   {
-    path: "/",
+    path: "/situation-reports",
     name: "SituationReports",
     props: route => ({
       voc: route.query.voc,
@@ -314,6 +327,7 @@ const routes = [
       }
     })
   },
+  
   {
     path: "/situation-reports/:alias?",
     name: "MutationReport",
@@ -322,7 +336,7 @@ const routes = [
       overlay: route.query.overlay,
       xmin: route.query.xmin,
       xmax: route.query.xmax,
-      loc: route.query.loc,
+      loc: route.query.loc, 
       muts: route.query.muts,
       pango: route.query.pango,
       selected: route.query.selected

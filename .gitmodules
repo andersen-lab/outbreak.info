@@ -1,0 +1,6 @@
+[submodule "bjorn"]
+	path = bjorn
+	url = https://github.com/andersen-lab/bjorn
+[submodule "outbreak-api-lite"]
+	path = outbreak-api-lite
+	url = https://github.com/andersen-lab/outbreak-api-lite
