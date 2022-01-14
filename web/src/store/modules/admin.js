@@ -7,7 +7,12 @@ const state = {
     authors: "Julia L. Mullen, Ginger Tsueng, Alaa Abdel Latif, Manar Alkuzweny, Marco Cano, Emily Haag, Jerry Zhou, Mark Zeller, Emory Hufbauer, Nate Matteson, Kristian G. Andersen, Chunlei Wu, Andrew I. Su, Karthik Gangavarapu, Laura D. Hughes, and the Center for Viral Systems Biology"
   },
   mutationAuthors: "Alaa Abdel Latif, Julia L. Mullen, Manar Alkuzweny, Ginger Tsueng, Marco Cano, Emily Haag, Jerry Zhou, Mark Zeller, Emory Hufbauer, Nate Matteson, Chunlei Wu, Kristian G. Andersen, Andrew I. Su, Karthik Gangavarapu, Laura D. Hughes, and the Center for Viral Systems Biology",
-  team: [{
+  team: [
+    {
+      name: "Chrissy Aceves",
+      img: "chrissy.jpg"
+    },
+    {
       name: "Manar Alkuzweny",
       img: "manar.jpg"
     },
@@ -43,8 +48,16 @@ const state = {
       linkedin: "https://www.linkedin.com/in/lauradhughes/"
     },
     {
+      name: "Kaleigh Jaeger",
+      img: "kaleigh.png"
+    },
+    {
       name: "Alaa Abdel Latif",
       img: "alaa.jpg"
+    },
+    {
+      name: "Josh Levy",
+      img: "josh.png"
     },
     {
       name: "Julia Mullen",
@@ -86,7 +99,7 @@ const state = {
     }
   ],
   funding: [{
-      identifier: "5 U19 AI135995-02",
+      identifier: "5 U19 AI135995-04S3",
       name: "CViSB",
       funder: {
         name: "National Institute for Allergy and Infectious Diseases"
@@ -132,19 +145,6 @@ const state = {
         name: "CC BY-NC"
       },
       citation: 'The New York Times. <i>Coronavirus (Covid-19) Data in the United States</i>. Available online: <a href="https://github.com/nytimes/covid-19-data" target="_blank">https://github.com/nytimes/covid-19-data</a> (2020)'
-    },
-    {
-      id: "testing",
-      name: "The COVID Tracking Project",
-      scope: "testing data",
-      img: "ustesting.svg",
-      description: 'Testing and hospitalization at the state-level for the United States. See <a target="_blank" rel="noreferrer" href="https://covidtracking.com/about-data">data caveats</a>. The COVID Tracking Project stopped collecting data on <a href="https://covidtracking.com/analysis-updates/giving-thanks-and-looking-ahead-our-data-collection-work-is-done" target="_blank">7 March 2021</a>.',
-      url: "https://covidtracking.com/",
-      license: {
-        url: "https://covidtracking.com/license",
-        name: "CC BY-NC"
-      },
-      citation: 'The Atlantic. <i>The COVID Tracking Project</i>. Available online: <a href="https://covidtracking.com/" target="_blank">https://covidtracking.com/</a> (2020)'
     }
   ],
   genomicSources: [{
@@ -526,6 +526,12 @@ const state = {
       }
     },
     {
+      date: new Date("2021-12-31 0:0"),
+      category: "data",
+      title: "Removed COVID Tracking Project data",
+      description: "Since the COVID Tracking Project stopped tracking data on <a href='https://covidtracking.com/analysis-updates/giving-thanks-and-looking-ahead-our-data-collection-work-is-done' target='_blank'>7 March 2021</a>, removed U.S. hospitalization / testing data."
+    },
+    {
       date: new Date("2021-03-16 0:0"),
       category: "variants",
       title: "Reclassified B.1.427 and B.1.429 as Variants of Concern",
@@ -627,6 +633,93 @@ const state = {
         },
         query: {
           selected: "USA_US-CA"
+        }
+      }
+    },
+    {
+      date: new Date("2021-11-25 0:0"),
+      category: "variants",
+      title: "Added B.1.1.529 as a Variant under Monitoring",
+      description: 'Based on the WHO classification, added B.1.1.529 as a Variant under Monitoring.',
+      route: {
+        name: "MutationReport",
+        params: {
+          alias: "omicron",
+        },
+        query: {
+          selected: "ZAF"
+        }
+      }
+    },
+    {
+      date: new Date("2021-12-17 0:0"),
+      category: "variants",
+      title: "Fixed Omicron mutation counting",
+      description: 'Adjusted parameters within the minimap2 alignment call (added <span style="font-family: monospace">--score-N=0</span>) in the <a href="https://github.com/andersen-lab/bjorn/commit/560591e12e1fbc8bd469bcc4b24d3a858abb89da" target="_blank">Bjorn</a> pipeline to account for long stretches of unknown base pairs (Ns) in Omicron. This fixes the mutation prevalence of mutations like S:S477N, S:T478K, S:E484A, whose prevalence was underreported before the patch.',
+      route: {
+        name: "SituationReportComparison",
+        query: {
+          pango: "Omicron"
+        }
+      }
+    },
+    {
+      date: new Date("2021-12-02 0:0"),
+      category: "variants",
+      title: "Added CDC classification of Omicron as a VOC",
+      description: "Updated the CDC's classification of Omicron as a Variant of Concern",
+      route: {
+        name: "MutationReport",
+        params: {
+          alias: "omicron",
+        },
+        query: {
+          selected: "ZAF"
+        }
+      }
+    },
+    {
+      date: new Date("2021-12-06 0:0"),
+      category: "variants",
+      title: "Added PHE classification of Omicron as a VOC",
+      description: "Updated the PHE's classification of Omicron as a Variant of Concern based on their <a href='https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/1038404/Technical_Briefing_30.pdf' target='_blank'>latest report.</a>",
+      route: {
+        name: "MutationReport",
+        params: {
+          alias: "omicron",
+        },
+        query: {
+          selected: "ZAF"
+        }
+      }
+    },
+    {
+      date: new Date("2021-12-14 0:0"),
+      category: "variants",
+      title: "Redesignated Omicron as B.1.1.529 and its sublineages",
+      description: "Redesignated Omicron as B.1.1.529 and its sub lineages. Updated NextStrain clades",
+      route: {
+        name: "MutationReport",
+        params: {
+          alias: "omicron",
+        },
+        query: {
+          selected: "ZAF"
+        }
+      }
+    },
+    {
+      date: new Date("2021-11-26 0:0"),
+      category: "variants",
+      title: "Added Omicron as a Variant of Concern",
+      description: 'Based on the WHO and ECDC classifications, upgraded Omicron / B.1.1.529 to a Variant of Concern.',
+      route: {
+        name: "MutationReport",
+        params: {
+          alias: "omicron",
+        },
+        query: {
+          selected: "ZAF"
         }
       }
     },
@@ -1221,6 +1314,15 @@ const state = {
           variable: "dead",
           xVariable: "daysSince10Deaths"
         }
+      }
+    },
+    {
+      date: new Date("2020-09-10 0:0"),
+      category: "deprecation",
+      title: "Removed the ability to normalize epidemiology plots by days since 100 cases, 10 deaths, or 50 deaths",
+      description: "Given that the pandemic has spanned over a year and a half, removed the option to shift the x-axis of epidemiology plots for simplicity.",
+      route: {
+        name: "Epidemiology"
       }
     },
     {

@@ -97,7 +97,12 @@
         <h4 class="m-0 mt-n1 text-grey">Location Tracker</h4>
         <div class="d-flex flex-wrap justify-content-between align-items-center">
           <div class="d-flex flex-column align-items-start">
+            <!-- WHO region -->
+            <div v-if="selectedLocation && selectedLocation.who_region" class="mt-2 mb-n1">
+              WHO Region: {{selectedLocation.who_region}}
+            </div>
 
+            <!-- name -->
             <div class="d-flex align-items-end">
               <div class="d-flex flex-wrap align-items-center">
                 <h1 class="m-0 font-weight-bold location-header">{{ title }}</h1>
@@ -106,19 +111,20 @@
                 </button>
               </div>
             </div>
+
+            <!-- last updated info -->
             <div class="d-flex align-items-center">
               <small class="text-muted badge bg-grey__lightest mt-1" v-if="lastUpdated">
                 <font-awesome-icon class="mr-1" :icon="['far', 'clock']" /> Updated {{ lastUpdated }} ago
               </small>
-              <div class="text-light font-size-2 ml-5" v-if="totalSequences">
-                {{totalSequences}} sequences
+              <div id="sequence-count" class="text-grey font-size-2 ml-3" v-if="totalSequences">
+                with <span class="text-light">{{totalSequences}} sequences</span> from GISAID
               </div>
             </div>
 
-
           </div>
           <div class="d-flex flex-column align-items-end justify-content-between flex-shrink-0">
-            <div class="d-flex align-items-center mb-1">
+            <div class="d-flex align-items-center mb-1 fa-lg">
               Enabled by data from
               <a href="https://www.gisaid.org/" rel="noreferrer" target="_blank">
                 <img src="@/assets/resources/gisaid.png" class="gisaid ml-2" alt="GISAID Initiative" />
@@ -224,6 +230,9 @@
             </small>
           </div>
 
+          <!-- OMICRON INSERTION WARNING -->
+          <Warning text="<p>Most Omicron sequences also contain a <b>3 amino acid insertion (EPE) at position 214 in the Spike</b> protein.</p> outbreak.info currently only reports substitution and deletion changes, due to the computational challenges with identifying insertions in 5+ million sequences every day. We’re working towards incorporating insertions into our data processing pipeline, and we encourage you to refer back to the sequence data available on GISAID for more information about these insertions." class="fa-sm mt-1 mb-2" :align_left="true" v-if="mostRecentDomain && (mostRecentDomain.includes('Omicron') || mostRecentDomain.includes('omicron') || mostRecentDomain.includes('B.1.1.529'))" />
+
           <div class="d-flex flex-column align-items-center" :class="{'bg-dark': darkMode}">
 
             <!-- HEATMAP LEGEND -->
@@ -255,6 +264,7 @@
                 Variant / Mutation of Interest
               </span>
             </div>
+
             <MutationHeatmap :data="recentHeatmap" gene="S" :locationID="loc" :voc="voc" :voi="voi" :moc="moc" :moi="moi" :yDomain="mostRecentDomain" :dark="darkMode" />
           </div>
           <DownloadReportData class="mt-3" :data="recentHeatmap" figureRef="mutation-heatmap" dataType="Mutation Report Heatmap" />
@@ -321,7 +331,7 @@
                   :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" />
               </div>
             </div>
-            <DownloadReportData :data="geoData" figureRef="report-choropleth" dataType="Mutation Report Prevalence over Time" v-if="!noRecentData" />
+            <DownloadReportData :data="geoData" figureRef="report-choropleth" dataType="Variant Report Prevalence over Time" v-if="!noRecentData" />
           </div>
 
           <!-- no recent geo data -->
@@ -528,7 +538,7 @@ export default {
       return (format(".0%")(this.otherThresh))
     },
     title() {
-      return (this.selectedLocation ? `${this.selectedLocation.label} Mutation Report` : null)
+      return (this.selectedLocation ? `${this.selectedLocation.label} Variant Report` : null)
     },
     seqCountsWindowed() {
       return this.recentMin && this.seqCounts ?
@@ -547,7 +557,7 @@ export default {
       if (this.newPango && this.newMuts.length) {
         newVariantObj = {
           label: `${this.newPango.name} + ${this.newMuts.map(d => d.mutation).join(", ")}`,
-          qParam: `${this.newPango.name}|${this.newMuts.map(d => d.mutation).join(",")}`,
+          qParam: `${this.newPango.name}|${this.newMuts.map(d => d.mutation).join(" AND ")}`,
           type: "variant"
         }
       } else if (this.newPango) {
@@ -1077,10 +1087,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.gisaid {
-    height: 25px;
-}
-
 .font-size-small {
     font-size: small;
 }

@@ -1,5 +1,6 @@
 import {
   from,
+  of ,
   forkJoin
 } from "rxjs";
 import axios from "axios";
@@ -15,8 +16,7 @@ import {
   nest,
   timeParse,
   timeFormat,
-  sum,
-  scaleThreshold
+  sum
 } from "d3";
 
 import {
@@ -38,13 +38,63 @@ import CURATED from "@/assets/genomics/curated_lineages.json";
 
 import store from "@/store";
 
+export function lookupEpiLocations(apiUrl, locationArr) {
+  if (locationArr.length) {
+    return from(
+      axios.get(
+        `${apiUrl}query?q=mostRecent:true AND location_id:(${locationArr.join(" OR ")})&size=1000&fields=name,location_id,country_name,state_name`
+      )
+    ).pipe(
+      pluck("data", "hits"),
+      map(results => {
+        results.forEach(d => {
+          d["label"] = d.state_name ? `${d.name}, ${d.state_name}` : d.country_name && d.country_name != d.name ? `${d.name}, ${d.country_name}` : d.name
+        })
+
+        // ensure the sort order is same as what was given
+        results.sort((a, b) => locationArr.indexOf(a.location_id) - locationArr.indexOf(b.location_id));
+
+        return (results)
+      }),
+      catchError(e => {
+        console.log("%c Error in epi locations!", "color: red");
+        console.log(e);
+        return from([]);
+      })
+    )
+  } else {
+    return ( of ([]))
+  }
+}
+
+export function findEpiLocation(apiUrl, query, num2Return = 5) {
+  return from(
+    axios.get(
+      `${apiUrl}query?q=mostRecent:true AND name.lower:*${query}*&size=${num2Return}&fields=name,location_id,country_name,state_name`
+    )
+  ).pipe(
+    pluck("data", "hits"),
+    map(results => {
+      results.forEach(d => {
+        d["label"] = d.state_name ? `${d.name}, ${d.state_name}` : d.country_name && d.country_name != d.name ? `${d.name}, ${d.country_name}` : d.name
+      })
+      return (results)
+    }),
+    catchError(e => {
+      console.log("%c Error in epi locations!", "color: red");
+      console.log(e);
+      return from([]);
+    })
+  )
+}
+
 export function getLocations(apiUrl) {
   store.state.admin.loading = true;
 
   if (store.state.geo.allPlaces.length == 0) {
     return getAll(
       apiUrl,
-      `mostRecent:true&fields=location_id,name,country_name,state_name,wb_region,admin_level`
+      `mostRecent:true&fields=location_id,name,country_name,admin1,wb_region,admin_level`
     ).pipe(
       map(results => {
         let places = results.map(d => {
@@ -111,7 +161,7 @@ function getLabel(entry) {
   } else if (String(entry.admin_level) == "1.5") {
     return `${entry.name} Metropolitan Area`;
   } else if (String(entry.admin_level) == "2") {
-    return `${entry.name}, ${entry.state_name}`;
+    return `${entry.name} County, ${entry.admin1}`;
   }
   return entry.name;
 }
@@ -254,102 +304,6 @@ export function getCasesAboveThresh(apiUrl, threshold) {
       console.log("%c Error in getting case counts!", "color: red");
       console.log(e);
       return from([]);
-    })
-  );
-}
-
-export function getGlanceSummary(apiUrl, genomicsUrl, locations) {
-  store.state.admin.loading = true;
-  const formatDate = timeFormat("%e %B %Y");
-  const parseDate = timeParse("%Y-%m-%d");
-  const timestamp = Math.round(new Date().getTime() / 36e5);
-  const location_string =
-    locations && locations.length ?
-    ` AND location_id:("${locations.join('" OR "')}")` :
-    ` AND admin_level:[0 TO *]&sort=-confirmed_numIncrease`;
-  const num2Return = locations && locations.length ? locations.length : 3;
-
-  return from(
-    axios.get(
-      `${apiUrl}query?q=mostRecent:true${location_string}&fields=location_id,name,confirmed,confirmed_numIncrease,confirmed_pctIncrease,date,dead,dead_numIncrease,dead_pctIncrease,dead_rolling,confirmed_rolling&size=${num2Return}&timestamp=${timestamp}`
-    )
-  ).pipe(
-    pluck("data", "hits"),
-    mergeMap(summaryData =>
-      forkJoin([
-        getVOCs(genomicsUrl, summaryData.map(d => d.location_id), 25),
-        getSparklineTraces(
-          apiUrl,
-          summaryData.map(d => d.location_id),
-          "confirmed,dead,confirmed_numIncrease,dead_numIncrease,confirmed_rolling,dead_rolling"
-        )
-      ]).pipe(
-        map(([voc, sparks]) => {
-          sparks.forEach(spark => {
-            const idx = summaryData.findIndex(d => d.location_id === spark.key);
-            if (idx > -1) {
-              summaryData[idx]["longitudinal"] = spark.value;
-            }
-          });
-
-          voc.forEach(variant => {
-            if (variant) {
-              const idx = summaryData.findIndex(d => d.location_id === variant[0].location_id);
-              if (idx > -1) {
-                summaryData[idx]["voc"] = variant;
-              }
-            }
-          })
-
-          summaryData.forEach(d => {
-            d["date"] = formatDate(parseDate(d["date"]));
-          });
-
-          return summaryData;
-        })
-      )
-    ),
-    catchError(e => {
-      console.log("%c Error in getting glance summary!", "color: red");
-      console.log(e);
-      return from([]);
-    }),
-    finalize(() => (store.state.admin.loading = false))
-  );
-}
-
-export function getVOCs(genomicsUrl, locations, totalThreshold) {
-  const mutations = CURATED.filter(d => (d.variantType == "Variant of Concern")).map(d => {
-    return ({
-      label: d.label,
-      type: d.variantType == "Variant of Concern" ? "VOC" : d.variantType == "Variant of Interest" ? "VOI" : null,
-      bulkQuery: d.char_muts_parent_query
-    })
-  });
-
-  return forkJoin(...locations.map(loc => getLocationTable(genomicsUrl, loc, mutations, totalThreshold))).pipe(
-    map(results => {
-
-      const flattened = results.flatMap(d => d).map(d => d.values);
-      const whiteThreshold = 0.35;
-      const colorScale = scaleThreshold(schemeYlGnBu[9])
-        .domain([0.01, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75]);
-
-      const cleaned = flattened.map(location => {
-        if (location.every(d => !d.global_prevalence)) {
-          // no location map for sequencing
-          return (null)
-        } else {
-          location.forEach(d => {
-            d["fill"] = colorScale(d.global_prevalence);
-            d["proportion_formatted"] = d.proportion_formatted == "not detected" ? "none" : d.proportion_formatted;
-            d["color"] = d.global_prevalence > whiteThreshold ? "#FFFFFF" : "#2c3e50";
-          })
-          return (location)
-        }
-      })
-
-      return cleaned;
     })
   );
 }

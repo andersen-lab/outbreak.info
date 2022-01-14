@@ -144,20 +144,37 @@
               <small class="mutation-hyperlink" v-if="pangoLink">
                 <a :href="pangoLink" target="_blank" rel="noreferrer">view on PANGO lineages</a>
               </small>
+
+              <small class="text-grey mx-2" v-if="pangoLink && aquariaLink">
+                &bull;
+              </small>
+
+
+              <!-- link to Aquaria structures -->
+              <template v-if="aquariaLink">
+                <small class="mutation-hyperlink" v-for="(link, lIdx) in aquariaLink" :key="lIdx">
+                  <a :href="link.value.link" target="_blank" rel="noreferrer">
+                    view <b>{{aquariaLink.length > 1 ? link.key + "-gene" : ""}}</b> {{link.value.count === 1 ? "mutation" : "mutations"}} on 3D structures (Aquaria)</a>
+                  <span class="text-grey mx-2" v-if="lIdx < aquariaLink.length - 1">
+                    &bull;
+                  </span>
+                </small>
+              </template>
+
             </div>
             <div class="d-flex align-items-center">
               <small class="text-muted badge bg-grey__lightest mt-1" v-if="lastUpdated">
                 <font-awesome-icon class="mr-1" :icon="['far', 'clock']" /> Updated {{ lastUpdated }} ago
               </small>
-              <div class="text-light font-size-2 ml-5" v-if="totalLineage">
-                {{totalLineage}} sequences
+              <div class="text-grey font-size-2 ml-3" v-if="totalLineage">
+                with <span class="text-light">{{totalLineage}} sequences</span> from GISAID
               </div>
             </div>
 
 
           </div>
           <div class="d-flex flex-column align-items-end justify-content-between flex-shrink-0">
-            <div class="d-flex align-items-center mb-1">
+            <div class="d-flex align-items-center mb-1 fa-lg">
               Enabled by data from
               <a href="https://www.gisaid.org/" rel="noreferrer" target="_blank">
                 <img src="@/assets/resources/gisaid.png" class="gisaid ml-2" alt="GISAID Initiative" />
@@ -169,6 +186,12 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <div id="warning" class="w-100 mt-3" v-if="(alias && alias.toLowerCase() == 'omicron') || pango == 'B.1.1.529'">
+        <Warning
+          text="As a newly designated Variant of Concern, Omicron is highly in flux. Expect the characteristic mutations associated with Omicron and its prevalence across locations to change as more sequences are reported. outbreak.info updates daily with new data from GISAID." />
+
       </div>
 
       <!-- Report Nav bar -->
@@ -211,7 +234,7 @@
           <!-- CHARACTERISTIC MUTATIONS -->
           <div class="mt-4" id="definition">
             <CharacteristicMutations :mutationName="reportName" :mutations="mutations" :reportType="reportType" :definitionLabel="definitionLabel" :additionalMutations="additionalMutations" :lineageName="lineageName" :sublineages="sublineageOptions"
-              v-if="mutations" />
+              :aquariaLink="aquariaLink" v-if="mutations" />
           </div>
 
           <!-- SUBLINEAGE BREAKDOWN -->
@@ -258,7 +281,7 @@
 
       <!-- DAILY SUBLINEAGE PREVALENCE -->
       <section class="vis my-3 py-3 d-flex flex-column align-items-center" id="longitudinal-sublineage" v-if="lineagesByDay">
-        <h4 class="mb-0">Lingeage breakdown of {{reportName}} by day {{locationLabel}}</h4>
+        <h4 class="mb-0">Lineage breakdown of {{reportName}} by day {{locationLabel}}</h4>
         <small class="text-muted mb-2">Based on reported sample collection date</small>
 
         <!-- change location selectors for sublineage prevalences -->
@@ -399,7 +422,8 @@ import isEqual from "lodash/isEqual";
 import debounce from "lodash/debounce";
 
 import {
-  scaleOrdinal
+  scaleOrdinal,
+  nest
 } from "d3";
 
 import ReportResources from "@/components/ReportResources.vue";
@@ -502,6 +526,27 @@ export default {
     },
     pangoLink() {
       return this.lineageName ? `https://cov-lineages.org/lineage.html?lineage=${this.lineageName}` : null
+    },
+    aquariaLink() {
+      if (this.additionalMutations && this.additionalMutations.length > 0) {
+        const aquariaStub = "https://aquaria.app/SARS-CoV-2/";
+        const mutationsByGene = nest()
+          .key(d => d.gene)
+          .rollup(values => {
+            return ({
+              link: values[0].gene.toLowerCase() === "orf1b" ?
+                // convert between ORF1b and ORF1ab: e.g. ORF1b P314L becomes https://aquaria.app/SARS-CoV-2/PP1ab?P4715L
+                // in general: gene?mutations, separated by &
+                `${aquariaStub}PP1ab?${values.map(d => this.calcORF1bLink(d)).join("&")}` : `${aquariaStub}${values[0].gene}?${values.map(d => d.mutation.replace(d.gene, "").replace(":", "")).join("&")}`,
+              count: values.length
+            })
+          })
+          .entries(this.additionalMutations)
+
+        return (mutationsByGene)
+      } else {
+        return (null)
+      }
     },
     choroplethLocations() {
       return (this.selectedLocations ? this.selectedLocations.filter(d => d.admin_level < 2) : null)
@@ -952,6 +997,16 @@ export default {
     },
     closeModal() {
       $("#change-pangolin-modal").modal("hide");
+    },
+    calcORF1bLink(mutation) {
+      const codonOffset = 4401;
+      // convert between ORF1b and ORF1ab: e.g. ORF1b P314L becomes https://aquaria.app/SARS-CoV-2/PP1ab?P4715L
+      if (mutation.type == "substitution") {
+        return (`${mutation.ref_aa}${mutation.codon_num + codonOffset}${mutation.alt_aa}`)
+      } else if (mutation.type == "deletion") {
+        return (`${mutation}`)
+      }
+
     }
   },
   destroyed() {
@@ -975,10 +1030,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.gisaid {
-    height: 25px;
-}
-
 .font-size-2 {
     font-size: 1.25rem;
 }
