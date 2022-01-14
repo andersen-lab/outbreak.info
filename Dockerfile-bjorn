@@ -6,6 +6,8 @@ RUN apt-get -y update && apt-get -y install jq
 SHELL ["conda", "run", "-n", "bjorndev", "/bin/bash", "-c"]
 COPY /web/src/localConfig.json .
 ADD /web/src/localConfig.json .
-COPY /bjorn .
+COPY /bjorn/ .
+COPY / .
 COPY /bjorn_wrapper.sh .
+RUN ls -la /
 CMD ["conda", "run", "-n", "bjorndev", "./bjorn_wrapper.sh"] 

@@ -26,7 +26,7 @@ build-new-data:
 	docker-compose --profile new-data up --build
 
 run-new-data:
-	docker-compose --profile new-data up 
+	docker-compose --profile new-data up
 
 build-ingest:
 	docker-compose --profile ingest up --build

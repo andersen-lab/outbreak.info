@@ -7,8 +7,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-bjorn
-    profiles: ["new-data", "all"]    
-  
+    profiles: ["new-data", "all"]  
+    volumes:
+      - type: bind
+        source: ./bjorn/
+        target: /home/chrissy/outbreak.info/bjorn
+   
   #es from docker image single node
   es:
     image: andersenlabapps/outbreak-info-es
