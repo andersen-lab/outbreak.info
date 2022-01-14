@@ -59,7 +59,7 @@
         <div v-for="(prev, index) in seqCountsLineWindowed" class="box" :key="index" :class="[mediumScreen ? 'w-100' : 'w-33']">          
            <SequencingHistogram :data="prev.data" :axisScale="maxSequences" :allowDetected="false" :width="widthHist" :height="heightHist" :downward="false" 
            :includeXAxis="true" :title="`${prev.id} Samples sequenced per day over last ${recentWindow} days`" 
-           :margin="marginHist" :onlyTotals="true" :detectedColor="`#69b3a2`" v-if="seqCountsLineWindowed"/>     
+           :margin="marginHist" :onlyTotals="true" :detectedColor="`#69b3a2`" :notDetectedColor="`#969998`" v-if="seqCountsLineWindowed"/>     
        </div>
      </div>
      </div>
