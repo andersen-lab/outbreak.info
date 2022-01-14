@@ -57,9 +57,9 @@
     <div class="d-flex align-items-start justify-content-center" style="margin-left: 50px;" :class="{'flex-wrap' : mediumScreen}"> 
      <div class="container">
         <div v-for="(prev, index) in seqCountsLineWindowed" class="box" :key="index" :class="[mediumScreen ? 'w-100' : 'w-33']">          
-           <SequencingHistogram :data="prev.data" :width="widthHist" :height="heightHist" :downward="false" 
+           <SequencingHistogram :data="prev.data" :axisScale="maxSequences" :allowDetected="false" :width="widthHist" :height="heightHist" :downward="false" 
            :includeXAxis="true" :title="`${prev.id} Samples sequenced per day over last ${recentWindow} days`" 
-           :margin="marginHist" :onlyTotals="true" v-if="seqCountsLineWindowed"/>     
+           :margin="marginHist" :onlyTotals="true" :detectedColor="`#69b3a2`" v-if="seqCountsLineWindowed"/>     
        </div>
      </div>
      </div>
@@ -148,6 +148,7 @@ export default {
       reportSubscription: null,
       reportName: null,
       muts: null,
+      maxSequences: null,
       selectedLocation: null,
       admin_level: 0,
       queryPangolin: null,
@@ -206,12 +207,15 @@ export default {
             if (x.dateTime >= this.recentMin){
                 x.total_count = x.lineage_count_rolling
                 temp.data.push(x);
+                if (this.maxSequences <= x.total_count){
+                  this.maxSequences=x.total_count;
+                }
             }
         });
         
         seqCountsLineNew.push(temp);
       });
-      console.log('seq', seqCountsLineNew);
+      
       return(seqCountsLineNew);
    }, 
   },
@@ -247,15 +251,11 @@ export default {
               temp['id'] = d.at(0).id
               this.seqCountsLine.push(temp);
               this.prevalence.push(temp);
-              //console.log(this.prevalence);
             }
             
          });
         this.selectedLocation = this.location
     });
-    //console.log("prevalence", this.prevalence, this.location);
-    //this.prevalence.forEach(d=>{console.log('p', d);});
-
   },
   getAllSequencesByLocation(admin_level) {
     this.countLocSubscription = getSequenceCount(this.$genomicsurl, false, true, false, true).subscribe(results => {
