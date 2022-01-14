@@ -226,6 +226,7 @@ export default Vue.extend({
         .range([0, this.height-this.margin.top-this.margin.bottom])
         .padding(0.1)
         .domain(this.updatedData.map(d => d.name));
+        
         //.tickValues(this.updatedData.map(d => d.name));
       
       // scale the x component
@@ -256,16 +257,18 @@ export default Vue.extend({
       this.updatedData.forEach(d => {
         d.total_count_norm = d.total_count / total_counts;
       });
-        
+      this.updatedData.sort((a, b) => (a.total_count_norm > b.total_count_norm) ? 1 : -1) 
       //put something here to sort bu percentage
 
    },
    drawPlot() {
       this.prepData();
+      
+      this.updateScales();
       const barSelector = this.chart
         .selectAll(".stacked-bar-chart")
         .data(this.updatedData);
-      
+     console.log(barSelector);
      // calculate label positions so they don't overlap
       const labelHeight = 18;
       barSelector.join(
