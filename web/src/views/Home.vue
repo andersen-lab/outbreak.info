@@ -90,7 +90,7 @@ import ReportPrevalence from "@/components/ReportPrevalence.vue";
 
 import {
   getGlanceSummary
-} from "@/api/epi-basics.js";
+} from "@/api/genomics.js";
 import Vue from "vue";
 import {
   mapState
@@ -414,6 +414,9 @@ export default {
         border: none !important;
     }
 }
+.mb-px-5{
+    padding-left: 3rem;
+     padding-right: 3rem;;
 
 .w-33 {
     width: 33% !important;

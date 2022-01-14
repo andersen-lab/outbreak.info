@@ -16,10 +16,10 @@
       <img src="@/assets/sars-virus.svg" alt="map" class="bg-image" />
       <div class="d-flex flex-column justify-content-center align-items-center">
         <div class="d-flex w-75 justify-content-around align-items-center">
-          <div class="text-left d-flex align-items-center my-3 border-top border-bottom py-2 px-2">
+          <div class="text-left d-flex align-items-center my-3 border-top border-bottom py-2 px-2 gisaid-text">
             Enabled by data from
             <a href="https://www.gisaid.org/" rel="noreferrer" target="_blank">
-              <img src="@/assets/resources/gisaid.png" class="gisaid ml-2" alt="GISAID Initiative" />
+              <img src="@/assets/resources/gisaid.png" class="gisaid-lg ml-2" alt="GISAID Initiative" />
             </a>
           </div>
         </div>
@@ -35,8 +35,8 @@
               <font-awesome-icon class="mr-1" :icon="['far', 'clock']" /> Updated {{ lastUpdated }} ago
             </small>
           </div>
-          <div id="sequence-count" class="ml-2 mr-5 text-highlight" v-if="total">
-            {{total}} sequences
+          <div id="sequence-count" class="ml-2 mr-5 text-muted" v-if="total">
+            with <span class="text-highlight">{{total}} sequences</span>  from GISAID
           </div>
         </div>
 
@@ -150,7 +150,7 @@
             </div>
 
             <!-- LINEAGE TABLE -->
-            <table class="bg-white my-2">
+            <table class="bg-white my-2 st-rep-table">
               <thead class="text-uppercase bg-dark text-light">
                 <tr class="border-bottom border-white">
                   <!-- table header -->
@@ -192,13 +192,8 @@
                     <td class="pt-2  border-bottom">
                       <!-- WHO reports -->
                       <template v-if="report.who_name">
-                        <!-- with sublineages -->
-                        <router-link :to="{name:'MutationReport', params: {alias: report.who_name.toLowerCase()}, query: {loc: report.loc, selected: report.selected} }" class="no-underline"
-                          v-if="report.pango_sublineages.length || Array.isArray(report.pangolin_lineage)">
-                          <h3 class="m-0 font-weight-bold border-bottom pb-1 mb-2" :id="anchorLink(report.who_name)">{{ report.label }}</h3>
-                        </router-link>
-                        <!-- WHO named lineage, no sublineages -->
-                        <router-link :to="{name:'MutationReport', query: {pango: report.pangolin_lineage, loc: report.loc, selected: report.selected} }" class="no-underline" v-else>
+                        <!-- WHO named lineage -->
+                        <router-link :to="{name:'MutationReport', params: {alias: report.who_name.toLowerCase()}, query: {loc: report.loc, selected: report.selected} }" class="no-underline">
                           <h3 class="m-0 font-weight-bold border-bottom pb-1 mb-2" :id="anchorLink(report.who_name)">{{ report.label }}</h3>
                         </router-link>
                       </template>
@@ -234,15 +229,33 @@
                         <div v-if="report.pango_sublineages.length">
                           <h5 class="sublineage d-flex flex-wrap">
                             <span class="mr-2">Sublineages: </span>
-                            <span v-for="(sublineage, sIdx) in report.pango_sublineages" :key="sIdx" :id="anchorLink(sublineage)">
-                              <router-link :to="{name:'MutationReport', query: {pango: sublineage, loc: report.loc, selected: report.selected }}" class="font-weight-bold no-underline" :id="anchorLink(sublineage)">{{sublineage}}</router-link>
-                              <span class="mx-1" v-if="sIdx < report.pango_sublineages.length - 1">&bull;</span>
-                            </span>
+                            <template v-if="report.showSublineages">
+                              <span v-for="(sublineage, sIdx) in report.pango_sublineages" :key="sIdx" :id="anchorLink(sublineage)">
+                                <router-link :to="{name:'MutationReport', query: {pango: sublineage, loc: report.loc, selected: report.selected }}" class="font-weight-bold no-underline" :id="anchorLink(sublineage)">{{sublineage}}</router-link>
+                                <span class="mx-1" v-if="sIdx < report.pango_sublineages.length - 1">&bull;</span>
+                              </span>
+                            </template>
+                            <template v-else>
+                              <span v-for="(sublineage, sIdx) in report.pango_sublineages.slice(0, sublineageMax)" :key="sIdx" :id="anchorLink(sublineage)">
+                                <router-link :to="{name:'MutationReport', query: {pango: sublineage, loc: report.loc, selected: report.selected }}" class="font-weight-bold no-underline" :id="anchorLink(sublineage)">{{sublineage}}</router-link>
+                                <span class="mx-1" v-if="sIdx < report.pango_sublineages.length - 1">&bull;</span>
+                                <span class="mx-1 opacity-75" v-if="sIdx == sublineageMax -1 && sIdx != report.pango_sublineages.length - 1">and
+                                  <span class="font-weight-bold">{{report.pango_sublineages.length - sublineageMax}}</span> more
+                                  <small>
+                                    <a @click="viewSublineages(report)" class="link">view all</a>
+                                  </small>
+                                </span>
+                              </span>
+                            </template>
                           </h5>
-                          <!-- DELTA WARNING! -->
-                          <div style='max-width: 470px;' class="mb-2" v-if="report.who_name == 'Delta'">
-                            <Warning text="Classifications of Delta lineages are in flux. <a href='https://outbreak.info/situation-reports/caveats#delta' class='text-light text-underline'>(read more)</a>" />
-                          </div>
+                        </div>
+                        <!-- DELTA WARNING! -->
+                        <div style='max-width: 470px;' class="mb-2" v-if="report.who_name == 'Delta'">
+                          <Warning text="Classifications of Delta lineages are in flux. <a href='https://outbreak.info/situation-reports/caveats#delta' class='text-light text-underline'>(read more)</a>" />
+                        </div>
+                        <!-- OMICRON WARNING! -->
+                        <div style='max-width: 470px;' class="mb-2" v-if="report.who_name == 'Omicron'">
+                          <Warning text="Classifications of Omicron lineages are in flux. <a href='https://outbreak.info/situation-reports/caveats#delta' class='text-light text-underline'>(read more)</a>" />
                         </div>
                       </div>
 
@@ -318,8 +331,14 @@
                       <div class="d-flex flex-column align-items-center">
                         <MutationHeatmap :data="report.mutations" :dark="false" gene="S" :yDomain="report.mutationsYDomain" :moc="curatedMOC" :moi="curatedMOI" v-if="report.mutations.length" />
                         <div class="d-flex">
-                          <router-link class="text-muted" :to="{name:'SituationReportComparison', query: { pango: report.char_muts_query } }" v-if="report.mutations.length">
-                            <small v-if="report.pango_sublineages.length">Compare sublineages
+                          <router-link class="text-muted" :to="{name:'SituationReportComparison', query: { pango: report.who_name, sub: true } }" v-if="report.mutations.length && report.who_name">
+                            <small v-if="report.pango_sublineages.length">Compare {{report.who_name}} sublineages
+                            </small>
+                            <small v-else>Explore all genes
+                            </small>
+                          </router-link>
+                          <router-link class="text-muted" :to="{name:'SituationReportComparison', query: { pango: report.char_muts_query } }" v-else-if="report.mutations.length">
+                            <small v-if="report.pango_sublineages.length">Compare {{report.pangolin_lineage}} sublineages
                             </small>
                             <small v-else>Explore all genes
                             </small>
@@ -459,6 +478,9 @@
                   <th>
                     total found
                   </th>
+                  <th>
+                    protein structures
+                  </th>
                 </tr>
               </thead>
 
@@ -487,6 +509,14 @@
 
                     <td>
                       {{ report.lineage_count }}
+                    </td>
+
+                    <td>
+                      <a :href="report.aquaria" v-if="report.aquaria" target="_blank" class="line-height-1 d-flex">
+
+                        {{report.mutation_name}} 3D structures
+                        <img src="@/assets/resources/aquaria.svg" style="width: 35px" class="ml-2"/>
+""                      </a>
                     </td>
                   </tr>
 
@@ -741,7 +771,21 @@ export default {
         this.filteredReports.forEach(group => {
           let filtered = [];
           group.values.forEach(report => {
-            if (report.classifications && (this.selectedVOC.length || this.selectedVOI.length)) {
+            // FILTER OUTBREAK CLASSIFICATIONS
+            if (report.variantType == "Variant of Concern" && this.selectedVOC.includes("outbreak") ||
+              report.variantType == "Variant of Interest" && this.selectedVOI.includes("outbreak")) {
+              // Filter by outbreak VOC/VOI + name
+              if (this.searchInput) {
+                if (report.searchTerms.some(x => x.toLowerCase().includes(this.searchInput.toLowerCase()))) {
+                  filtered.push(report);
+                }
+              } else {
+                // just add the outbreak VOC/VOI
+                filtered.push(report)
+              }
+
+              // FILTER BY CLASSICATIONS
+            } else if (report.classifications && (this.selectedVOC.length || this.selectedVOI.length)) {
               // filter name filters
               if (this.searchInput) {
                 if (report.searchTerms.some(x => x.toLowerCase().includes(this.searchInput.toLowerCase())) &&
@@ -751,7 +795,10 @@ export default {
                   filtered.push(report);
                 }
               } else {
-                if (report.classifications.filter(x => x.variantType == "VOC" && this.selectedVOC.includes(x.author)).length || report.classifications.filter(x => (x.variantType == "VOI" || x.variantType == "VUI") && this.selectedVOI
+                // filter only the classifications
+                if (report.classifications.filter(x => x.variantType == "VOC" &&
+                    this.selectedVOC.includes(x.author)).length ||
+                  report.classifications.filter(x => (x.variantType == "VOI" || x.variantType == "VUI") && this.selectedVOI
                     .includes(x
                       .author))
                   .length) {
@@ -830,6 +877,9 @@ export default {
         })
       }
     },
+    viewSublineages(report) {
+      report.showSublineages = true;
+    },
     anchorLink(link) {
       return (link.replace(/\./g, "_"))
     },
@@ -855,6 +905,7 @@ export default {
       mutationReports: [],
       filteredReports: null,
       filteredMutations: [],
+      sublineageMax: 5,
       variantTypes: [{
           id: "VOC",
           label: "Variant of Concern",
@@ -1002,10 +1053,6 @@ export default {
 <style lang="scss" scoped>
 .logo {
     width: 150px;
-}
-
-.gisaid {
-    height: 25px;
 }
 
 $mutation-width: 275px;
@@ -1205,5 +1252,14 @@ $de-escalated: #bab0ab;
 
 .sublineages {
     max-width: 500px;
+}
+
+.opacity-75 {
+  opacity: 0.75 !important;
+}
+.st-rep-table{
+  display: block;
+  overflow-x: auto;
+    width: 100%;
 }
 </style>

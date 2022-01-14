@@ -26,7 +26,8 @@ import {
   quantile,
   sum,
   range,
-  scaleOrdinal
+  scaleOrdinal,
+  scaleThreshold
 } from "d3";
 
 import {
@@ -34,12 +35,17 @@ import {
 } from "d3-array";
 
 import {
-  getEpiTraces
+  schemeYlGnBu
+} from "d3-scale-chromatic";
+
+import {
+  getEpiTraces, getSparklineTraces
 } from "@/api/epi-traces.js";
 
 import CURATED from "@/assets/genomics/curated_lineages.json";
 import MUTATIONS from "@/assets/genomics/curated_mutations.json";
 import NT_MAP from "@/assets/genomics/sarscov2_NC045512_genes_nt.json";
+import WHO_REGIONS from "@/assets/genomics/who_regions.json";
 
 import orderBy from "lodash/orderBy";
 import uniq from "lodash/uniq";
@@ -52,6 +58,16 @@ const formatDateShort = timeFormat("%e %b %Y");
 const formatPercent = format(".0%");
 import json from "@/localConfig.json";
 import store from "@/store";
+
+axios.interceptors.request.use(function(config) {
+  // Pass GISAID param to API via headers
+  // * BEFORE COMPLIATION, YOU NEED to run `export VUE_APP_API_ACCESS={key}`*
+  config.headers.Authorization = `Bearer ${process.env.VUE_APP_API_ACCESS}`;
+  return config;
+}, function(error) {
+  return Promise.reject(error);
+});
+
 
 function capitalize(value) {
   if (!value) return ''
@@ -187,6 +203,8 @@ export function getCuratedMutations(apiurl, prevalenceThreshold) {
       // Merge in the lineages
       curated.forEach(mutation => {
         mutation["lineages"] = lineagesByMutation[mutation.mutation_name].map(d => d.pangolin_lineage);
+        console.log(mutation)
+        mutation["aquaria"] = `https://aquaria.app/SARS-CoV-2/${mutation.mutation_name.replace(":", "?")}`;
       })
 
       // nest by MOC/MOI
@@ -265,16 +283,17 @@ export function getSublineageMutations(apiurl, prevalenceThreshold, sMutationsOn
 
 export function getCuratedList(apiurl, prevalenceThreshold, sMutationsOnly = true) {
   const query = CURATED.filter(d => d.variantType != "De-escalated").map(d => d.label);
-  
-  return (getCharacteristicMutations(apiurl, query, 0, false)).pipe(
+  return forkJoin(...query.map(d => getCharacteristicMutations(apiurl, d, 0, false))).pipe(
     map(charMuts => {
+      // flatten array of objects to a single object.
+      charMuts = Object.assign(...charMuts)
 
       // pull out the characteristic mutations and bind to the curated list.
       let curated = orderBy(CURATED, ["variantType"]);
       // loop over each curated report; attach the associated lineages / characteristic mutations with it.
       curated.forEach(report => {
-        let mutations_in_report = [];
 
+        report["showSublineages"] = false;
         report["mutations"] = Object.keys(charMuts).includes(report.char_muts_parent_query) ? charMuts[report.char_muts_parent_query] : [];
         report["mutationsYDomain"] = uniq(report.mutations.map(d => d.pangolin_lineage));
         report["lineage_count"] = report.mutations[0] ? report.mutations[0].lineage_count.toLocaleString() : null;
@@ -709,7 +728,7 @@ function cleanSelectors(id) {
   return id.replace(/:/g, "_").replace(/\//g, "_").replace(/\s\+\s/g, "--").replace(/:/g, "_").replace(/\*/g, "stop").replace(/\(/g, "").replace(/\)/g, "").replace(/\./g, "-").replace(/\s/g, "_");
 }
 
-export function getCharacteristicMutations(apiurl, lineage, prevalenceThreshold = store.state.genomics.characteristicThreshold, returnFlat = true) {
+export function getCharacteristicMutations(apiurl, lineage, prevalenceThreshold = store.state.genomics.characteristicThreshold, returnFlat = true, includeSublineages = false) {
   const timestamp = Math.round(new Date().getTime() / 36e5);
   if (!lineage)
     return ( of ([]));
@@ -718,12 +737,20 @@ export function getCharacteristicMutations(apiurl, lineage, prevalenceThreshold 
   if (Array.isArray(lineage)) {
     lineage = lineage.map(d => {
       const filtered = CURATED.filter(report => report.label == d);
+      if (includeSublineages) {
+        return filtered.length === 1 ? `${filtered[0].char_muts_parent_query},${filtered[0].pango_descendants.join(",")}` : lineage;
+      } else {
       return (filtered.length === 1 ? filtered[0].char_muts_parent_query : d)
+    }
     })
     lineage = lineage.join(",");
   } else {
     const filtered = CURATED.filter(report => report.label == lineage);
-    lineage = filtered.length === 1 ? filtered[0].char_muts_parent_query : lineage;
+    if (includeSublineages) {
+      lineage = filtered.length === 1 ? `${filtered[0].char_muts_parent_query},${filtered[0].pango_descendants.join(",")}` : lineage;
+    } else {
+      lineage = filtered.length === 1 ? filtered[0].char_muts_parent_query : lineage;
+    }
   }
 
   // convert + to AND to specify lineages + mutations
@@ -1319,6 +1346,7 @@ export function findLocationMetadata(apiurl, location) {
       pluck("data", "results"),
       map(results => {
         results["id"] = location;
+        results["who_region"] = WHO_REGIONS[results.country_id];
         return (results)
       }),
       catchError(e => {
@@ -1861,7 +1889,10 @@ export function getSequenceCount(apiurl, location = null, cumulative = true, rou
 
 // COMPARISON REPORTS
 export function getBasicComparisonReportData(apiurl) {
-  store.state.genomics.locationLoading1 = true
+  store.state.genomics.locationLoading1 = true;
+
+  const who = CURATED.filter(d => d.who_name).map(d => d.who_name).sort();
+
   return forkJoin([
     getDateUpdated(apiurl),
     getSequenceCount(apiurl)
@@ -1869,6 +1900,7 @@ export function getBasicComparisonReportData(apiurl) {
     map(([dateUpdated, total]) => {
       return ({
         dateUpdated: dateUpdated,
+        who: who,
         total: total
       })
     }),
@@ -1989,7 +2021,7 @@ export function getComparisonByLocation(apiurl, lineages, prevalenceThreshold, l
 
 
 
-export function getLineagesComparison(apiurl, lineages, prevalenceThreshold) {
+export function getLineagesComparison(apiurl, lineages, prevalenceThreshold, includeSublineages = false) {
   store.state.genomics.locationLoading2 = true;
 
   // if nothing selected, pull out the VOCs/VOIs
@@ -2003,7 +2035,7 @@ export function getLineagesComparison(apiurl, lineages, prevalenceThreshold) {
 
   const ofInterest = getVOCs();
 
-  return forkJoin([...lineages.map(lineage => getCharacteristicMutations(apiurl, lineage, 0))]).pipe(
+  return forkJoin([...lineages.map(lineage => getCharacteristicMutations(apiurl, lineage, 0, true, includeSublineages))]).pipe(
     map((results, idx) => {
       const prevalentMutations = uniq(results.flatMap(d => d).filter(d => d.prevalence > prevalenceThreshold).map(d => d.mutation));
 
@@ -2035,8 +2067,6 @@ export function getLineagesComparison(apiurl, lineages, prevalenceThreshold) {
           d.type == "deletion" ? d.mutation.toUpperCase().split(":").slice(-1)[0] : d.mutation;
       })
 
-      // update lineages to be the "fixed" names, to account for WHO / grouped names.
-      lineages = uniq(results.flatMap(d => d).map(d => d.pangolin_lineage));
 
       let nestedByGenes = nest()
         .key(d => d.gene)
@@ -2050,8 +2080,7 @@ export function getLineagesComparison(apiurl, lineages, prevalenceThreshold) {
         voc: ofInterest.voc,
         voc_parent: ofInterest.voc_parent,
         voi: ofInterest.voi,
-        voi_parent: ofInterest.voi_parent,
-        yDomain: lineages
+        voi_parent: ofInterest.voi_parent
       })
     }),
     catchError(e => {
@@ -2283,4 +2312,101 @@ export function getSeqMap(apiurl, epiurl, location) {
     }),
     finalize(() => store.state.genomics.locationLoading3 = false)
   )
+}
+
+
+export function getGlanceSummary(apiUrl, genomicsUrl, locations) {
+  store.state.admin.loading = true;
+  const formatDate = timeFormat("%e %B %Y");
+  const parseDate = timeParse("%Y-%m-%d");
+  const timestamp = Math.round(new Date().getTime() / 36e5);
+  const location_string =
+    locations && locations.length ?
+    ` AND location_id:("${locations.join('" OR "')}")` :
+    ` AND admin_level:[0 TO *]&sort=-confirmed_numIncrease`;
+  const num2Return = locations && locations.length ? locations.length : 3;
+
+  return from(
+    axios.get(
+      `${apiUrl}query?q=mostRecent:true${location_string}&fields=location_id,name,confirmed,confirmed_numIncrease,confirmed_pctIncrease,date,dead,dead_numIncrease,dead_pctIncrease,dead_rolling,confirmed_rolling&size=${num2Return}&timestamp=${timestamp}`
+    )
+  ).pipe(
+    pluck("data", "hits"),
+    mergeMap(summaryData =>
+      forkJoin([
+        getVOCTotals(genomicsUrl, summaryData.map(d => d.location_id), 25),
+        getSparklineTraces(
+          apiUrl,
+          summaryData.map(d => d.location_id),
+          "confirmed,dead,confirmed_numIncrease,dead_numIncrease,confirmed_rolling,dead_rolling"
+        )
+      ]).pipe(
+        map(([voc, sparks]) => {
+          sparks.forEach(spark => {
+            const idx = summaryData.findIndex(d => d.location_id === spark.key);
+            if (idx > -1) {
+              summaryData[idx]["longitudinal"] = spark.value;
+            }
+          });
+
+          voc.forEach(variant => {
+            if (variant) {
+              const idx = summaryData.findIndex(d => d.location_id === variant[0].location_id);
+              if (idx > -1) {
+                summaryData[idx]["voc"] = variant;
+              }
+            }
+          })
+
+          summaryData.forEach(d => {
+            d["date"] = formatDate(parseDate(d["date"]));
+          });
+
+          return summaryData;
+        })
+      )
+    ),
+    catchError(e => {
+      console.log("%c Error in getting glance summary!", "color: red");
+      console.log(e);
+      return from([]);
+    }),
+    finalize(() => (store.state.admin.loading = false))
+  );
+}
+
+export function getVOCTotals(genomicsUrl, locations, totalThreshold) {
+  const mutations = CURATED.filter(d => (d.variantType == "Variant of Concern")).map(d => {
+    return ({
+      label: d.label,
+      type: d.variantType == "Variant of Concern" ? "VOC" : d.variantType == "Variant of Interest" ? "VOI" : null,
+      bulkQuery: d.char_muts_parent_query
+    })
+  });
+
+  return forkJoin(...locations.map(loc => getLocationTable(genomicsUrl, loc, mutations, totalThreshold))).pipe(
+    map(results => {
+
+      const flattened = results.flatMap(d => d).map(d => d.values);
+      const whiteThreshold = 0.35;
+      const colorScale = scaleThreshold(schemeYlGnBu[9])
+        .domain([0.01, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75]);
+
+      const cleaned = flattened.map(location => {
+        if (location.every(d => !d.global_prevalence)) {
+          // no location map for sequencing
+          return (null)
+        } else {
+          location.forEach(d => {
+            d["fill"] = colorScale(d.global_prevalence);
+            d["proportion_formatted"] = d.proportion_formatted == "not detected" ? "none" : d.proportion_formatted;
+            d["color"] = d.global_prevalence > whiteThreshold ? "#FFFFFF" : "#2c3e50";
+          })
+          return (location)
+        }
+      })
+
+      return cleaned;
+    })
+  );
 }
