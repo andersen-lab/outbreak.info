@@ -74,8 +74,19 @@
       
      </div>
    </section>
-  
-
+  <section class="d-flex flex-column justify-content-center align-items-left bg-grag-grey text-light px-3 pt-2 mb-5">
+    <div class="d-flex justify-content-center align-items-center px-5 py-3">
+      <div class="d-flex w-100 justify-content-between">
+        <div>
+          <h4 class="at-a-glance-header m-0">Epi Data at a Glance</h4>
+          <p class="mb-0">
+            View case count data.
+         </p>
+        </div>
+      </div>
+    </div>
+       
+  </section>
 </div>
 </template>
 <script>
