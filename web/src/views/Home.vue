@@ -204,8 +204,8 @@ export default {
         temp['data'] = [];
         temp['id'] = d.id;
         d.prevalence.forEach(x => {
-            if (x.dateTime >= this.recentMin){
-                x.total_count = x.lineage_count_rolling
+            if (x.dateTime >= this.recentMin){ 
+                x.total_count = x.lineage_count
                 temp.data.push(x);
                 if (this.maxSequences <= x.total_count){
                   this.maxSequences=x.total_count;
@@ -376,19 +376,19 @@ export default {
 
 .barchart-container {
   margin-bottom: 20px;
-  width:500px;
-  height:500px;
+  width:600px;
+  height:600px;
   //background-color: #fff;
 } 
 
 .container {
   //margin: 20px auto;
-  width:500px;
+  width:600px;
   height:500px;
   //background-color: #fff;
   display:grid;
   padding:0;
-  grid-template-columns: 200px 200px;
+  grid-template-columns: 200px 200px 200px;
   grid-row: auto auto;
   grid-column-gap: 5px;
   grid-row-gap: 5px;
