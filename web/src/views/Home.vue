@@ -417,7 +417,7 @@ export default {
 .mb-px-5{
     padding-left: 3rem;
      padding-right: 3rem;;
-
+}
 .w-33 {
     width: 33% !important;
 }
