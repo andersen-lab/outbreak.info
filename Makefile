@@ -29,10 +29,13 @@ run-new-data:
 	docker-compose --profile new-data up
 
 build-ingest:
-	docker-compose --profile ingest up --build
+	docker-compose --profile ingest-data up --build
 
 run-ingest:
 	docker-compose --profile ingest-data up
+
+run-ingest-only:
+	docker-compose --profile ingest-only up
 
 build-website:
 	docker-compose --profile website up --build
