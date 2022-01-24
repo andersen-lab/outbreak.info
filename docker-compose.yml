@@ -42,7 +42,7 @@ services:
       - es
     networks:
       - some-net 
-    profiles: ["ingest-data", "all"]
+    profiles: ["ingest-data", "all", "ingest-only"]
   
   #start up the api
   tornado:
