@@ -184,8 +184,8 @@ export default {
       loc: null,
       setWidth:null,
       prevalence: null,
-      widthHist: 200,
-      heightHist: 150,
+      widthHist: 300,
+      heightHist: 200,
       seqCountsLine: [],
       marginHist: {
         left: 55,
@@ -387,19 +387,19 @@ export default {
 
 .barchart-container {
   margin-bottom: 20px;
-  width:600px;
-  height:600px;
+  width:450px;
+  height:500px;
   //background-color: #fff;
 } 
 
 .container {
   //margin: 20px auto;
-  width:600px;
+  width:900px;
   height:500px;
   //background-color: #fff;
   display:grid;
   padding:0;
-  grid-template-columns: 200px 200px 200px;
+  grid-template-columns: 300px 300px 300px;
   grid-row: auto auto;
   grid-column-gap: 5px;
   grid-row-gap: 5px;
