@@ -1,10 +1,12 @@
 {
   "localBuildName": "Andersen Lab Build",
+  "esSnapshot": "False",
   "siteUrl": "kenny.scripps.edu",
   "locationFocus": "USA_US-CA_06073",
   "pathToZipcodes":"./ZipCode.geojson",
   "zipcodeFocus":"USA_US-CA_06073",
   "gitRepo":"https://github.com/andersen-lab/HCoV-19-Genomics",
   "cores":32,
-  "gaTracking":"placeholder"
+  "gaTracking":"placeholder",
+  "zipcodeEpi":"https://gis-public.sandiegocounty.gov/arcgis/rest/services/Hosted/COVID19_CaseRateData/FeatureServer/1/query?where=1%3D1&outFields=zip,zip_text_comb,zip_code,total_cases,new_cases_in_7_day_case_rate,population,f7_day_average_case_rate,positive_tests_in_7_day_testing,total_tests_in_7_day_testing_po,testing_positivity_percentage,previous_week_case_rate,current_date_range,previous_week_date_range&returnGeometry=false&outSR=4326&f=json"
 }
