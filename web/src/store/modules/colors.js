@@ -17,7 +17,7 @@ const categoricalPalette = [
   "#ff98a8", // pink (Book)
   "#9c755f", // brown (SoftwareSourceCode)
   "#bab0ab", // grey
-  "#552586", // dark blue
+  "#154d7e", // dark blue
   "#ba6000",
   "#aa2230",
   "#418d88",

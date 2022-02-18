@@ -5,8 +5,8 @@
   <header id="outbreak-header">
     <nav class="navbar navbar-expand-lg navbar-dark w-100 bg-grey__lighter nav-hero">
       <router-link to="/" class="navbar-brand no-underline">
-        <img src="@/assets/icon-01.svg" width="30" height="30" class="d-inline-block align-top" alt="Outbreak.info" />
-        outbreak.info | {{localBuildName}}
+        <img src="@/assets/icon-01.svg" width="30" height="30" class="d-inline-block align-top" alt="Outbreak.info" /> 
+         outbreak.network | {{localBuildName}}
       </router-link>
       <button class="navbar-toggler" type="button" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
@@ -62,7 +62,6 @@
     </div> 
     <!-- LOGO FOOTER -->
     <Logos class="bg-grey" />
-
     <div class="
           row
           m-0

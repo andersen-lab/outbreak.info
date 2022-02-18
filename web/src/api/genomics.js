@@ -82,6 +82,27 @@ function titleCase(value) {
   }
 }
 
+export function getCaseCounts(apiurl, date_range=null){
+    let url;
+    if(date_range){
+        url = `${apiurl}casecounts?current_date_range=${date_range}`;
+    }else{
+        url =`${apiurl}casecounts`;
+    }
+    
+    
+    return from(axios.get(url, {
+    headers: {
+      "Content-Type": "application/json"
+    }
+    })).pipe(
+    pluck("data"),
+    map(hits => {
+       
+       return(hits['results']);
+      }))              
+}
+
 export function lookupLineageDetails(apiurl, mutationObj, prevalenceThreshold) {
   const queryStr = mutationObj.reportQuery.muts ?
     `pangolin_lineage=${mutationObj.reportQuery.pango}&mutations=${mutationObj.reportQuery.muts}` :
@@ -203,7 +224,7 @@ export function getCuratedMutations(apiurl, prevalenceThreshold) {
       // Merge in the lineages
       curated.forEach(mutation => {
         mutation["lineages"] = lineagesByMutation[mutation.mutation_name].map(d => d.pangolin_lineage);
-        console.log(mutation)
+        
         mutation["aquaria"] = `https://aquaria.app/SARS-CoV-2/${mutation.mutation_name.replace(":", "?")}`;
       })
 
@@ -462,7 +483,7 @@ export function getReportData(apiurl, alias, locations, mutationArr, lineageStri
   }
   
   //console.log('in getReportData', lineageString, mutationArr, totalThreshold, location, locations);
-  console.log(apiurl);
+ 
   return forkJoin([
     getDateUpdated(apiurl),
     findAllLocationMetadata(apiurl, locations, location), //
@@ -1109,7 +1130,6 @@ export function getPrevalenceofCuratedLineages(apiurl, location, locations, line
 
 export function getShapeData(apiurl, location){
     let url;
-    //console.log('shape url', url);
     url = `${apiurl}shape?location_id=${location}`;    
     console.log('shape url', url);
     return from(axios.get(url, {
