@@ -17,6 +17,16 @@ services:
   es:
     image: andersenlabapps/outbreak-info-es
     container_name: es
+    environment:
+      - node.name=es
+      - discovery.seed_hosts=es02
+      - cluster.initial_master_nodes=es
+      - bootstrap.memory_lock:true
+      - "ES_JAVA_OPTS=-Xms50g -Xmx50g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     build:
       context: .
       dockerfile: Dockerfile-es
@@ -27,7 +37,28 @@ services:
     networks:
       - some-net
     profiles: ["ingest-data", "website", "all", "debug"]
-  
+  es02:
+    image: andersenlabapps/outbreak-info-es
+    container_name: es02
+    environment:
+      - node.name=es02
+      - discovery.seed_hosts=es
+      - cluster.initial_master_nodes=es
+      - bootstrap.memory_lock:true
+      - "ES_JAVA_OPTS=-Xms40g -Xmx40g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    build:
+      context: .
+      dockerfile: Dockerfile-es
+    volumes:
+      - data02:/usr/share/elasticsearch/data
+    networks:
+      - some-net
+    profiles: ["ingest-data", "website", "all", "debug"]
+ 
   #ingest the es db
   ingest:
     logging:
@@ -37,12 +68,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-index
+    volumes:
+      - type: bind
+        source: /home/chrissy/outbreak.info/bjorn/test/test_genomics_data.json
+        target: /test_genomics_data.json
     restart: on-failure:10
     depends_on:
       - es
     networks:
       - some-net 
-    profiles: ["ingest-data", "all"]
+    profiles: ["ingest-data", "all", "debug"]
   
   #start up the api
   tornado:
@@ -56,7 +91,7 @@ services:
       - "8000:8000"
     networks:
       - some-net
-    profiles: ["ingest-data", "website", "all", "debug"]
+    profiles: ["ingest-data", "website", "all"]
 
   #start up the local build
   localbuild:
@@ -76,6 +111,8 @@ services:
 
 volumes:
   data01:
+    driver: local
+  data02:
     driver: local
 networks:
   some-net:
