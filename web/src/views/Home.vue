@@ -9,7 +9,7 @@
       <div class="col-sm-12 d-flex justify-content-center align-items-center bg-main__darker px-0 back-1">
         <div class="d-flex flex-column w-100 align-items-center my-2">
           <div class="row m-0 w-100 d-flex justify-content-center">
-           <img src="@/assets/logo-full-white-01.svg" alt="Outbreak.info" class="w-20"/>
+           <img src="@/assets/logo-full-white-01.svg" alt="Outbreak.info" width="300"/>
           </div>
           <h1 class="text-light my-1 mx-3"> Local Build</h1>
           <p class="text-light my-1 mx-3">
@@ -65,7 +65,7 @@
      </div>
    </div>
    </section>
- 
+
    <section class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal" v-if="prevalence">
      <div v-for="(prev, index) in prevalence" :key="index"> 
          <h4 class="mb-0">Average daily {{prev.id}} prevalence {{locationLabel}}</h4>
@@ -74,7 +74,7 @@
       
      </div>
    </section>
-  <section class="d-flex flex-column justify-content-center align-items-left bg-grag-grey text-light px-3 pt-2 mb-5">
+  <section class="d-flex flex-column justify-content-center align-items-left bg-grag-grey text-light px-3 pt-2 mb-5" v-if="caseData">
     <div class="d-flex justify-content-center align-items-center px-5 py-3">
       <div class="d-flex w-100 justify-content-between">
         <div>
@@ -85,11 +85,21 @@
         </div>
       </div>
     </div>
-       
   </section>
+   <!-- Case / Sequences Info -->
+   <section id=epi>
+     <div class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal">
+        <CaseHistogram :data="caseData" v-if="caseData"/>      
+     </div>
+     <div class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal">
+       <ReportChoroplethZipcode report="loc" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label" :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" :poly=shapeData :outline=outlineData />
+     </div> 
+   </section>
 </div>
 </template>
 <script>
+
+
 // @ is an alias to /src
 // import Vue from "vue";
 import SearchBar from "@/components/SearchBar.vue";
@@ -98,6 +108,8 @@ import TypeaheadSelect from "@/components/TypeaheadSelect";
 import SequencingHistogram from "@/components/SequencingHistogram";
 import StackedBargraph from "@/components/StackedBargraph.vue";
 import ReportPrevalence from "@/components/ReportPrevalence.vue";
+import CaseHistogram from "@/components/CaseHistogram.vue";
+import ReportChoroplethZipcode from "@/components/ReportChoroplethZipcode.vue";
 
 import {
   getGlanceSummary
@@ -134,11 +146,18 @@ import {
   getReportData,
   getLocationReportData,
   getBasicLocationReportData,
-  getPrevalenceofCuratedLineages
+  getPrevalenceofCuratedLineages,
+  getCaseCounts,
 } from "@/api/genomics.js";
 import {
-  timeDay
+  timeDay,
+  scaleThreshold,
 }  from "d3";
+
+import {
+  schemeYlGnBu,
+  interpolateRdPu
+} from "d3-scale-chromatic";
 
 export default {
   name: "Home",
@@ -147,6 +166,8 @@ export default {
     StackedBargraph,
     SequencingHistogram,
     ReportPrevalence,
+    CaseHistogram,
+    ReportChoroplethZipcode
  },
   data() {
     return {
@@ -165,8 +186,12 @@ export default {
       queryPangolin: null,
       queryLocation: null,
       xmin: null,
+      dateRangePeriod:10,
       xmax: null,
+      caseData: null,
+      caseMax: null,
       recentWindow: "60",
+      dotTitle:"Sample Plot",
       seqCounts: null,
       locationFocus: null,
       seqLocCounts: null,
@@ -174,6 +199,7 @@ export default {
       countLocSubscription: null,
       basicSubscription: null,
       dataReportSubscription:null,
+      caseSubscription:null,
       dateUpdated: null,
       lastUpdated: null,
       totalSequences: null,
@@ -187,6 +213,7 @@ export default {
       widthHist: 300,
       heightHist: 200,
       seqCountsLine: [],
+      caseCountsLine: [],
       marginHist: {
         left: 55,
         right: 55,
@@ -223,10 +250,8 @@ export default {
                 }
             }
         });
-        
         seqCountsLineNew.push(temp);
       });
-      
       return(seqCountsLineNew);
    }, 
   },
@@ -243,7 +268,69 @@ export default {
         this.selectedLocation = results.location;
       })
     },
+  getFormattedDate(date) {
+  var year = date.getFullYear();
 
+  var month = (1 + date.getMonth()).toString();
+  month = month.length > 1 ? month : '' + month;
+
+  var day = (date.getDate()).toString();
+  day = day.length > 1 ? day : '0' + day;
+  
+  return month + '/' + day + '/' + year;
+  },
+  incrementDate(dateObj, timePeriod){
+    dateObj.setDate(dateObj.getDate()-timePeriod);
+    return(dateObj);
+  },
+ 
+  setupCaseCounts(){
+    this.caseSubscription = getCaseCounts(this.$epiapiurl).subscribe(results => {
+    this.caseData=[];
+    var uniqueDates = [];
+    var dateRange=[];
+    var today = new Date();
+    var lastDate = parseInt(today.getDay())+1;
+    var tempString = "";
+    var tempDate=null;
+
+    //change the date to the last known "end period"
+    today = this.incrementDate(today,lastDate);
+    var i =0;
+    while(i < this.dateRangePeriod){
+        tempDate=this.getFormattedDate(today);
+        today = this.incrementDate(today,6);
+        tempString=this.getFormattedDate(today)+"-"+tempDate;
+        dateRange.push(tempString);
+
+        today =this.incrementDate(today,1);
+        tempString="";
+        ++i
+    }
+
+    results.forEach(d=>{
+      if(dateRange.includes(d.current_date_range)){
+      var tempNum = parseFloat(d.f7_day_average_case_rate);
+      if(d.current_date_range in uniqueDates){
+        this.caseData.forEach(f=>{
+          if(d.current_date_range == f.current_date_range){
+            var tempNumTwo = parseFloat(f.f7_day_average_case_rate);
+            f.current_date_range += tempNumTwo;
+          }
+        })
+        
+      }else{
+         var tempObj = {"current_date_range":d.current_date_range, "f7_day_average_case_rate":tempNum};
+         this.caseData.push(tempObj);
+         uniqueDates.push(tempObj);
+      }
+    }          
+    })
+    
+    this.caseMax=1000;
+    console.log('case data', this.caseData);
+  })
+  },
   // set up information for each of the prevlance reports
   setupPrevalence(){    
     var totalThresh = 25; 
@@ -333,6 +420,9 @@ export default {
    if (this.basicSubscription) {
       this.basicSubscription.unsubscribe();
     }
+    if (this.caseSubscription) {
+      this.caseSubscription.unsubscribe();
+    }
     if (this.countLocSubscription) {
       this.countLocSubscription.unsubscribe();
     }
@@ -350,6 +440,7 @@ export default {
   mounted() {
     this.localBuildName = json['localBuildName']
     this.setupReport();
+    this.setupCaseCounts();
     this.loc= json["locationFocus"];
     this.updateSequenceCount();
     this.getAllSequencesByLocation(this.admin_level);

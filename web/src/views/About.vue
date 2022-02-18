@@ -7,8 +7,7 @@
         <div class="logo row m-0 w-100 d-flex justify-content-center">
           <img class="w-50 mb-5" src="@/assets/logo-full-01.svg" alt="Outbreak.info"/> 
         </div>
-        <h1>Local Build</h1>
-        
+       
         <h5 class="justify-content-left text-left" style="font-size:30px" v-if="buildName || total || gitRepo"> Your Local Build at a Glance</h5>
           <div class="text-left" style="font-size:24px">
             <div class="item1" v-if="buildName">{{buildName}}</div> 
