@@ -37,7 +37,7 @@ services:
     networks:
       - some-net
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:9200/_cat/health"]
+      test: ["CMD", "curl", "http://35.222.182.12:9200/_cat/health"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -95,7 +95,7 @@ services:
       dockerfile: Dockerfile-server
     restart: on-failure:10
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:8000"]
+      test: ["CMD", "curl", "http://35.222.182.12:8000"]
     depends_on:
       es:
         condition: service_healthy
