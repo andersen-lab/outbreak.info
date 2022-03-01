@@ -27,7 +27,7 @@
           unify COVID-19 and SARS-CoV-2 epidemiology and genomic data, published research, and other resources.
         </p>
 
-        <p>Outbreak.info Local Build is an additional project that allows researchers to use the outbreak.info interative visualizations for genomic variants to explore SARS-CoV-2 data from customizable data sources. The original project, outbreak.info can be found <a href="https://outbreak.info/" target="_blank">here</a>
+        <p>Outbreak.network is an additional project that allows researchers to use the outbreak.info interative visualizations for genomic variants to explore SARS-CoV-2 data from customizable data sources. The original project, outbreak.info can be found <a href="https://outbreak.info/" target="_blank">here</a>
         </p>
    </div>
   </div>
