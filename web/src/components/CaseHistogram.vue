@@ -54,6 +54,7 @@ export default Vue.extend({
   name: "CaseHistogram",
   props: {
     data: Array,
+    targetLocation : String
  },
   computed: {
     title() {
@@ -106,7 +107,6 @@ export default Vue.extend({
       // methods
       ttips: null,
       area: null,
-      targetLocation:null,
       // data
       series: null,
       lineages: null,
@@ -136,8 +136,6 @@ export default Vue.extend({
       {passive:true});
     });
  
-    //get the target location
-    this.targetLocation = json['locationFocus'];  
     // set initial dimensions for the plotss
     this.setupPlot();
     this.updatePlot();
@@ -186,11 +184,10 @@ export default Vue.extend({
       this.data.sort(function(x, y) {
         var a = x.current_date_range.split("-").at(0);
         var b = y.current_date_range.split('-').at(0);
-        var aa = a.split('/').reverse().join(),
-        bb = b.split('/').reverse().join();
-        return aa < bb ? -1 : (aa > bb ? 1 : 0);
+        var aDate = new Date(a);
+        var bDate = new Date(b);
+        return aDate < bDate ? -1 : (aDate > bDate ? 1 : 0);
       })
-      console.log(this.data);
    },
    drawPlot() {
       this.prepData();

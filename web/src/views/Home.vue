@@ -89,10 +89,10 @@
    <!-- Case / Sequences Info -->
    <section id=epi>
      <div class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal">
-        <CaseHistogram :data="caseData" v-if="caseData"/>      
+        <CaseHistogram :data="caseData" :targetLocation="loc" v-if="caseData"/>      
      </div>
      <div class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal">
-       <ReportChoroplethZipcode report="loc" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label" :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" :poly=shapeData :outline=outlineData />
+     <!--<ReportChoroplethZipcode report="loc" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label" :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" :poly=shapeData :outline=outlineData />-->
      </div> 
    </section>
 </div>
@@ -147,6 +147,7 @@ import {
   getLocationReportData,
   getBasicLocationReportData,
   getPrevalenceofCuratedLineages,
+  findLocationMetadata,
   getCaseCounts,
 } from "@/api/genomics.js";
 import {
@@ -167,7 +168,7 @@ export default {
     SequencingHistogram,
     ReportPrevalence,
     CaseHistogram,
-    ReportChoroplethZipcode
+    //ReportChoroplethZipcode
  },
   data() {
     return {
@@ -186,7 +187,7 @@ export default {
       queryPangolin: null,
       queryLocation: null,
       xmin: null,
-      dateRangePeriod:10,
+      dateRangePeriod:8,
       xmax: null,
       caseData: null,
       caseMax: null,
@@ -199,6 +200,7 @@ export default {
       countLocSubscription: null,
       basicSubscription: null,
       dataReportSubscription:null,
+      locationSubscription:null,
       caseSubscription:null,
       dateUpdated: null,
       lastUpdated: null,
@@ -256,6 +258,15 @@ export default {
    }, 
   },
  methods: {
+  //get the full name of the location
+  getLocationName(){  
+    var targetLocation = json['locationFocus']
+    console.log(targetLocation);
+    this.locationSubscription = findLocationMetadata(this.$genomicsurl, targetLocation).subscribe(results => {
+        this.loc = results.location;
+        
+    })
+  },
   //set up basic information
   setupReport(){
    this.basicSubscription = getBasicLocationReportData(this.$genomicsurl, this.loc).subscribe(results => {
@@ -272,7 +283,7 @@ export default {
   var year = date.getFullYear();
 
   var month = (1 + date.getMonth()).toString();
-  month = month.length > 1 ? month : '' + month;
+  month = month.length > 1 ? month : '0' + month;
 
   var day = (date.getDate()).toString();
   day = day.length > 1 ? day : '0' + day;
@@ -288,7 +299,7 @@ export default {
     this.caseSubscription = getCaseCounts(this.$epiapiurl).subscribe(results => {
     this.caseData=[];
     var uniqueDates = [];
-    var dateRange=[];
+    var dateRange=[]; // range of dates to include in hist
     var today = new Date();
     var lastDate = parseInt(today.getDay())+1;
     var tempString = "";
@@ -307,11 +318,23 @@ export default {
         tempString="";
         ++i
     }
-
+    
     results.forEach(d=>{
-      if(dateRange.includes(d.current_date_range)){
+      // need to be reformatted to match the current mm/dd/yyyy schema
+      var splitDates = d.current_date_range.split("-");
+      var formattedDates = "";
+      var i = 0;
+      splitDates.forEach(d=>{
+        var partDate = new Date(d);
+        formattedDates += this.getFormattedDate(partDate);       
+        if (i==0){
+        formattedDates += "-";
+        i++;
+        }
+      })
+      if(dateRange.includes(formattedDates)){
       var tempNum = parseFloat(d.f7_day_average_case_rate);
-      if(d.current_date_range in uniqueDates){
+      if(formattedDates in uniqueDates){
         this.caseData.forEach(f=>{
           if(d.current_date_range == f.current_date_range){
             var tempNumTwo = parseFloat(f.f7_day_average_case_rate);
@@ -320,15 +343,13 @@ export default {
         })
         
       }else{
-         var tempObj = {"current_date_range":d.current_date_range, "f7_day_average_case_rate":tempNum};
+         var tempObj = {"current_date_range":formattedDates, "f7_day_average_case_rate":tempNum};
          this.caseData.push(tempObj);
          uniqueDates.push(tempObj);
       }
     }          
     })
-    
     this.caseMax=1000;
-    console.log('case data', this.caseData);
   })
   },
   // set up information for each of the prevlance reports
@@ -343,7 +364,7 @@ export default {
               this.location = d.at(0).label;
             } else{
               var temp = []
-              //console.log(d);
+              
               temp['prevalence'] = d.at(0)['data'];
               temp['reportName'] = d.at(0).pango_descendants.at(0);
               temp['id'] = d.at(0).id
@@ -426,6 +447,9 @@ export default {
     if (this.countLocSubscription) {
       this.countLocSubscription.unsubscribe();
     }
+    if (this.locationSubscription){
+        this.locationSubscription.unsubscribe();
+    }
     if (this.countSubscription) {
       this.countSubscription.unsubscribe();
     }
@@ -439,6 +463,7 @@ export default {
    },
   mounted() {
     this.localBuildName = json['localBuildName']
+    this.getLocationName();
     this.setupReport();
     this.setupCaseCounts();
     this.loc= json["locationFocus"];
