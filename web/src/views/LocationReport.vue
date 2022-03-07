@@ -318,7 +318,8 @@
               <!-- Histogram of sequencing ZIPCODE LEVEL -->
               <SequencingHistogram :data="seqCountsWindowed" :width="widthHist" :downward="false" :includeXAxis="true" :margin="marginHist" :mutationName="null" className="sequencing-histogram"
                 :title="`Samples sequenced per day over last ${recentWindow} days`" :onlyTotals="true" notDetectedColor="#bab0ab" v-if="seqCountsWindowed && !noRecentData" />
-
+              <Warning class="fa-sm ml-3" text="Choropleth won't display for small sample sizes.<a href='#methods' class='text-light text-underline'>(read more)</a>" v-if="choroMaxCount < 25"/>
+ 
             </div>
           </div>
 
@@ -383,7 +384,7 @@
               <!-- Histogram of sequencing COUNTY LEVEL -->
               <SequencingHistogram :data="seqCountsWindowed" :width="widthHist" :downward="false" :includeXAxis="true" :margin="marginHist" :mutationName="null" className="sequencing-histogram"
                 :title="`Samples sequenced per day over last ${recentWindow} days`" :onlyTotals="true" notDetectedColor="#bab0ab" v-if="seqCountsWindowed && !noRecentData" />
-
+              <Warning class="fa-sm ml-3" text="Choropleth won't display for small sample sizes.<a href='#methods' class='text-light text-underline'>(read more)</a>" v-if="choroMaxCount < 25"/>
             </div>
           </div>
 
