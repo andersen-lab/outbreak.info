@@ -295,7 +295,7 @@
         </section>      
 
        <!-- ZIPCODE -->
-       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2 && choroMaxCount > 25">
+       <section id="geographic-zipcode" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 2">
           <div class="d-flex flex-wrap justify-content-between align-items-center">
             <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
             <div class="d-flex align-items-center">
@@ -360,7 +360,7 @@
 
 
        <!-- COUNTIES -->
-       <section id="geographic-counties" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 1 && choroMaxCount > 25">
+       <section id="geographic-counties" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 1">
           <div class="d-flex flex-wrap justify-content-between align-items-center">
             <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
             <div class="d-flex align-items-center">
@@ -424,7 +424,7 @@
        </section>
 
        <!-- GEOGRAPHIC CHOROPLETHS -->
-        <section id="geographic" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 0 && choroMaxCount > 25">
+        <section id="geographic" class="my-5 py-3 border-top" v-if="geoData && selectedLocation.admin_level === 0 && loc == 'USA'">
           <div class="d-flex flex-wrap justify-content-between align-items-center">
             <h3 class="m-0">Geographic prevalence of tracked lineages &amp; mutations</h3>
             <div class="d-flex align-items-center">
@@ -450,11 +450,11 @@
               <!-- Histogram of sequencing counts -->
               <SequencingHistogram :data="seqCountsWindowed" :width="widthHist" :downward="false" :includeXAxis="true" :margin="marginHist" :mutationName="null" className="sequencing-histogram"
                 :title="`Samples sequenced per day over last ${recentWindow} days`" :onlyTotals="true" notDetectedColor="#bab0ab" v-if="seqCountsWindowed && !noRecentData" />
-
-            </div>
+              <Warning class="fa-sm ml-3" text="Choropleth won't display for small sample sizes.<a href='#methods' class='text-light text-underline'>(read more)</a>" v-if="choroMaxCount < 25"/>
+             </div>
           </div>
 
-          <div class="d-flex flex-wrap" v-if="geoData && selectedLocation.admin_level === 0 && choroMaxCount > 25">
+          <div class="d-flex flex-wrap" v-if="geoData && selectedLocation.admin_level === 0 && choroMaxCount > 25 && loc == 'USA'">
             <div v-for="(choro, cIdx) in geoData" :key="cIdx" class="my-3" :class="[mediumScreen ? 'w-100' : 'w-33']">
               <div v-if="choro.values.length">
                 <div class="d-flex justify-content-between align-items-center mx-4">
@@ -1083,7 +1083,6 @@ export default {
       if (this.selectedLocation.admin_level <= 2){ 
         this.choroSubscription = getLocationMaps(this.$genomicsurl, this.loc, this.selectedMutations, this.recentWindow).subscribe(results => {
           this.geoData = results;
-          console.log(this.selectedLocation.admin_level);
           this.choroMaxCount = max(results.flatMap(d => d.values), d => d.cum_total_count);
         })
       }
