@@ -1,9 +1,10 @@
 <template>
 <div>
-  <h5 class="m-0">Seven Day Average Case Rate in {{targetLocation}}</h5>
+  <h5 class="m-0">Top {{displayCount}} Sequence Contributers</h5>
   <svg :width="width" :height="height" class="report-stacked-bar" ref="stacked_bar" :name="title">
     <g :transform="`translate(${margin.left},${margin.bottom})`" ref="chart">
     </g>
+    <g class="stacked-legend" ref="legend"></g>
     <g class="epi-axis axis--y" ref="yAxis" :transform="`translate(${margin.left},${margin.bottom})`"></g>
     <g class="epi-axis axis--x" ref="xAxis" :transform="`translate(${margin.left},${height-margin.top})`"></g>
   </svg>
@@ -14,7 +15,7 @@
       <span id="confidence-interval" class="text-muted ml-2"></span>
     </div>
     <div id="case-count"></div>
-    <div id="date"></div>
+    <div id="location-name"></div>
   </div>
 
 
@@ -48,20 +49,20 @@ import {
   scaleOrdinal,
   max,
   map,
-  round
+  round,
+  interpolateYlGn,
+  quantize,
+  interpolate
 } from "d3";
 
 export default Vue.extend({
-  name: "CaseHistogram",
+  name: "SequencerAcknowledgements",
   props: {
     data: Array,
-    targetLocation : String,
-    color: String
+    color: String,
+    displayCount: Number,
  },
   computed: {
-    title() {
-      return (`Cases Sequenced in the Last 4 weeks.`);
-    },
     rectWidth() {
         return(1/this.data.length);
     }
@@ -82,8 +83,8 @@ export default Vue.extend({
     return ({
       // dimensions
       margin: {
-        top: 100,
-        bottom: 10,
+        top: 40,
+        bottom: 30,
         left: 100,
         right: 10
       },
@@ -91,10 +92,10 @@ export default Vue.extend({
         top: 100,
         bottom: 10,
         left: 55,
-        right: 55
+        right: 100
       },
-      width: 400,
-      height: 400,
+      width: 500,
+      height: 500,
       legendHeight: null,
       // variables
       fillVar: "key",
@@ -114,6 +115,7 @@ export default Vue.extend({
       lineages: null,
       // refs
       chart: null,
+      colors: null,
       legend: null,
       prevLoc: [],
     })
@@ -149,6 +151,7 @@ export default Vue.extend({
     setupPlot() {
       this.chart = select(this.$refs.chart);
       this.ttips = select(this.$refs.choropleth_tooltip);
+      this.legend = select(this.$refs.legend);
     },
     //change the labels so that they have a newline to make them more readable
    updateScales() {
@@ -156,49 +159,67 @@ export default Vue.extend({
       this.x = this.x
         .range([0, this.width-this.margin.left-this.margin.right])
         .paddingInner(0.1)
-        .domain(this.data.map(d => d.current_date_range));
+        .domain(this.data.map(d => d.name));
 
-      var ymax = max($.map(this.data, function(d) { return d.f7_day_average_case_rate; })); 
-      
+      var ymax = max($.map(this.data, function(d) { return d.count; })); 
       // scale the x component
       this.y = this.y
         .domain([ymax,0])
         .range([0, this.height-this.margin.top-this.margin.bottom]);
       
-      this.yAxis = axisLeft(this.y); 
+      this.yAxis = axisLeft(this.y);    
       this.xAxis = axisBottom(this.x).tickPadding(20);
 
      (this.data)
       select(this.$refs.yAxis).call(this.yAxis);
-      select(this.$refs.xAxis).call(this.xAxis)
-        .selectAll("text")
-        .attr("x", -30)
-        .attr("transform", function (d) {
-        return "rotate(-20)";});
-    },
+   },
     updatePlot() {
       if (this.data) {
         this.updateScales();
         this.drawPlot();
       }
     },
-
+   // takes d3 generated rgb and creates a hex code
+   handleRGB(rgb){
+     var a = rgb.split("(")[1].split(")")[0];
+     a = a.split(",");
+     var b = a.map(function(x){             //For each array element
+        x = parseInt(x).toString(16);      //Convert to a base16 string
+        return (x.length==1) ? "0"+x : x;  //Add zero if we get only one character
+    })
+    b = "#"+b.join("");
+    return b;
+   },
+   // preps data for charting, sorts, adds colors
    prepData(){
       this.data.sort(function(x, y) {
-        var a = x.current_date_range.split("-").at(0);
-        var b = y.current_date_range.split('-').at(0);
-        var aDate = new Date(a);
-        var bDate = new Date(b);
-        return aDate < bDate ? -1 : (aDate > bDate ? 1 : 0);
+        var b = x.count
+        var a = y.count
+        return a < b ? -1 : (a > b ? 1 : 0);
       })
+      this.data = this.data.slice(0, this.displayCount);
+      this.colors = []
+      var i = 0;
+      var colorInterpolator = interpolate("orange", "green");
+      var allColors = quantize(colorInterpolator, this.displayCount);
+      console.log("ALL COLORS", allColors);
+      this.data.forEach(d=>{
+        var color = allColors.at(i);
+        var x = this.handleRGB(color);
+        this.colors.push([d.name, x]); 
+        d.color = x;
+        i++;
+      })
+      
    },
    drawPlot() {
       this.prepData();
       this.updateScales();
+
       const barSelector = this.chart
         .selectAll(".stacked-bar-chart")
         .data(this.data);
-     
+      
      // calculate label positions so they don't overlap
       const labelHeight = 18;
       
@@ -208,11 +229,11 @@ export default Vue.extend({
             .attr("class", "stacked-bar-chart")
             .attr("id", d => d.name)
           barGrp.append("rect")
-            .attr("height", d => this.y(0)-this.y(d.f7_day_average_case_rate))
-            .attr("y", d => this.y(d.f7_day_average_case_rate))
-            .attr("x", d => this.x(d.current_date_range))
+            .attr("height", d => this.y(0)-this.y(d.count))
+            .attr("y", d => this.y(d.count))
+            .attr("x", d => this.x(d.name))
             .attr("width", this.x.bandwidth())
-            .style("fill", this.color)
+            .style("fill", d => d.color)
        },
         update => {
           update
@@ -234,7 +255,60 @@ export default Vue.extend({
         )
       )
 
-      this.chart.selectAll("rect")
+    //legend
+    const legendSelector = this.legend
+        .selectAll(".stacked-legend")
+        .data(this.colors);
+      
+    const legendText = this.legend
+        .selectAll("text")
+        .data(this.colors);
+      legendText.enter()
+          .append("text")
+          .style("font-size", 10)
+          .attr("x", this.width - 282)
+          .attr("y", function(d, i) {
+            return i * 20 + 9 + 10;
+            })
+          .text(d=> d[0])
+
+      legendSelector.join(
+        enter => {
+          const legGrp = enter.append("g")
+            .attr("class", "stacked-legend")
+            .attr("id", d => d[0])
+          legGrp.append("rect")
+            .attr("height", 10)
+            .attr("x", d => this.width - 300)
+            .attr("width", 10)
+            .attr("y", function(d,i) {
+                return 10+(i*20);
+            })
+            .style("fill", d => d[1])
+       },
+        update => {
+          update
+            .attr("id", d => d.key.replace(/\./g, "-"))
+          update.select("rect")
+            .attr("x", d => this.width-65)
+            .attr("width", d => 10)
+            .style("fill", d => this.colorScale(d.key))
+          update.select("text")
+            .attr("x", d => d[0])
+            .style("fill", d => d[1])
+       },
+        exit =>
+        exit.call(exit =>
+          exit
+          .transition()
+          .style("opacity", 1e-5)
+          .remove()
+        )
+      )
+
+    
+
+     this.chart.selectAll("rect")
         .on("mouseenter", d => this.debounceMouseon(d))
 
     },
@@ -242,12 +316,12 @@ export default Vue.extend({
       const ttipShift = 15;
       const ttip = select(this.$refs.tooltip_choro)
     
-   ttip.select("#date")
-      .text(`Date range: ${d.current_date_range}`)     
+    ttip.select("#location-name")
+      .text(`Lab Name: ${d.name}`)     
       .classed("hidden", false);
    
     ttip.select("#case-count")
-      .text(`Case count: ${d.f7_day_average_case_rate}`)     
+      .text(`Sequence count: ${d.count}`)     
       .classed("hidden", false);
         
      // fix location

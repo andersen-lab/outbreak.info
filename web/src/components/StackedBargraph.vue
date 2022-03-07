@@ -64,6 +64,7 @@ export default Vue.extend({
   props: {
     data: Array,
     admin_level: Number,
+    color: String,
  },
   computed: {
     title() {
@@ -90,7 +91,7 @@ export default Vue.extend({
       // dimensions
       margin: {
         top: 18,
-        bottom: 30,
+        bottom: 20,
         left: 150,
         right: 10
       },
@@ -100,7 +101,7 @@ export default Vue.extend({
         left: 55,
         right: 55
       },
-      width: 400,
+      width: 500,
       height: 400,
       legendHeight: null,
       // variables
@@ -194,12 +195,10 @@ export default Vue.extend({
         });
     },
     returnUniqueLocs(){
-        //console.log("in Unique locs");
         var uniqueLocs = [];
         var uniqueNames = [];
         this.data.forEach(d=>{
             // we've clicked on a location
-            //console.log(this.targetLoc, this.admin_level);
             if(this.targetLoc && this.admin_level > 0){
                if (!uniqueLocs.includes(d.loc_code.at(this.admin_level)) && 
                     d.loc_code.at(this.admin_level-1) === this.targetLoc){
@@ -268,7 +267,7 @@ export default Vue.extend({
       const barSelector = this.chart
         .selectAll(".stacked-bar-chart")
         .data(this.updatedData);
-     console.log(barSelector);
+     
      // calculate label positions so they don't overlap
       const labelHeight = 18;
       barSelector.join(
@@ -281,7 +280,7 @@ export default Vue.extend({
             .attr("width", d => this.x(d.total_count_norm))
             .attr("y", d => this.y(d.name))
             .attr("height", this.y.bandwidth())
-            .style("fill", "#69b3a2")
+            .style("fill", this.color)
             .on("click", d => this.destroy(d))
        },
         update => {
@@ -344,7 +343,6 @@ export default Vue.extend({
         .style("display", "none");
    },
    buttonBack(d){
-     console.log('heree');
      if (this.admin_level > 0){
        this.admin_level -= 1;
        this.targetLoc = this.prevLoc.at(-1);

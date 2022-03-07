@@ -6,7 +6,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark w-100 bg-grey__lighter nav-hero">
       <router-link to="/" class="navbar-brand no-underline">
         <img src="@/assets/icon-01.svg" width="30" height="30" class="d-inline-block align-top" alt="Outbreak.info" /> 
-         outbreak.network | {{localBuildName}}
+          outbreak. <b style="color:#FCB22B"> network </b> | {{localBuildName}}
       </router-link>
       <button class="navbar-toggler" type="button" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>

@@ -20,7 +20,7 @@ Vue.prototype.$genomicsurl = "http://" + siteUrl + ":8000/hcov19/";
 Vue.prototype.$shapeapiurl = "http://" + siteUrl + ":8000/shape/";
 Vue.prototype.$zipcodesapiurl = "http://" + siteUrl + ":8000/zipcodes/";
 Vue.prototype.$zipcodeFocus = json["zipcodeFocus"]
-
+Vue.prototype.$epiapiurl = "http://" + siteUrl + ":8000/epi/";
 
 Vue.use(VueRx);
 Vue.use(VueCookies);

@@ -19,7 +19,7 @@
           Broad sharing of these resources improves the speed and efficiency of science. Unfortunately, there are no uniform standards and repositories for collecting all this information in one place.</p>
         
         <p class="text-left focustext pt-2"><strong>Outbreak.info</strong> is a project that aggregates data across scientific sources and provides tools to analyze this data.</p>
-        <p class="text-left focustext pt-2"><strong>Outbreak.info Local Build</strong> is an offshoot project that allows users to analyze genomic data using custom data sources.</p>
+        <p class="text-left focustext pt-2"><strong>Outbreak.network</strong> is an offshoot project that allows users to create a local build of outbreak.info in order to analyze genomic data using custom data sources.</p>
         <p class="text-left focustext mty-5 py-4 border-top">
           Outbreak.info is a project from the <a href="http://sulab.org/" rel="noreferrer" target="_blank">Su</a>, <a href="http://wulab.io/" rel="noreferrer" target="_blank">Wu</a>, and <a href="https://andersen-lab.com/" rel="noreferrer"
             target="_blank">Andersen</a> labs at Scripps Research and is supported <span class="my-4" v-if="funding">by the <span v-for="(grant, idx) in funding" :key="idx">

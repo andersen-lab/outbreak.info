@@ -84,21 +84,19 @@ function titleCase(value) {
 
 export function getCaseCounts(apiurl, date_range=null){
     let url;
+    
     if(date_range){
         url = `${apiurl}casecounts?current_date_range=${date_range}`;
     }else{
         url =`${apiurl}casecounts`;
     }
-    
-    
     return from(axios.get(url, {
     headers: {
       "Content-Type": "application/json"
     }
     })).pipe(
     pluck("data"),
-    map(hits => {
-       
+    map(hits => {       
        return(hits['results']);
       }))              
 }
@@ -1025,7 +1023,7 @@ export function getNewToday(apiurl, queryStr, location) {
 export function getZipcodes(apiurl, location){
     let url;
     url = `${apiurl}get-zipcodes?location_id=${location}`;
-    //console.log("IN ZIPCODES", url);
+   
     return from(axios.get(url, {
     headers: {
       "Content-Type": "application/json"
@@ -1131,7 +1129,7 @@ export function getPrevalenceofCuratedLineages(apiurl, location, locations, line
 export function getShapeData(apiurl, location){
     let url;
     url = `${apiurl}shape?location_id=${location}`;    
-    console.log('shape url', url);
+    
     return from(axios.get(url, {
     headers: {
       "Content-Type": "application/json"
@@ -1222,7 +1220,7 @@ export function getPositiveLocations(apiurl, queryStr, location, returnFlat = tr
   } else {
     url = `${apiurl}lineage-by-sub-admin-most-recent?${queryStr}&detected=true&location_id=${location}&timestamp=${timestamp}`;
   }
-  console.log(url);
+  
   return from(axios.get(url, {
     headers: {
       "Content-Type": "application/json"
@@ -2394,6 +2392,20 @@ export function getGlanceSummary(apiUrl, genomicsUrl, locations) {
     finalize(() => (store.state.admin.loading = false))
   );
 }
+
+export function getLabCounts(apiurl) {
+    let url;    
+    url = `${apiurl}labcounts`;
+    
+    return from(axios.get(url, {
+    headers: {
+      "Content-Type": "application/json"
+    }
+    })).pipe(
+    pluck("data"),
+    map(hits => {       
+       return(hits['results']);
+      }))       }
 
 export function getVOCTotals(genomicsUrl, locations, totalThreshold) {
   const mutations = CURATED.filter(d => (d.variantType == "Variant of Concern")).map(d => {
