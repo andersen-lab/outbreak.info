@@ -14,6 +14,7 @@
       <span id="confidence-interval" class="text-muted ml-2"></span>
     </div>
     <div id="case-count"></div>
+    <div id="date"></div>
   </div>
 
 
@@ -54,7 +55,8 @@ export default Vue.extend({
   name: "CaseHistogram",
   props: {
     data: Array,
-    targetLocation : String
+    targetLocation : String,
+    color: String
  },
   computed: {
     title() {
@@ -163,13 +165,14 @@ export default Vue.extend({
         .domain([ymax,0])
         .range([0, this.height-this.margin.top-this.margin.bottom]);
       
-      this.yAxis = axisLeft(this.y);    
+      this.yAxis = axisLeft(this.y); 
       this.xAxis = axisBottom(this.x).tickPadding(20);
 
      (this.data)
       select(this.$refs.yAxis).call(this.yAxis);
       select(this.$refs.xAxis).call(this.xAxis)
         .selectAll("text")
+        .attr("x", -30)
         .attr("transform", function (d) {
         return "rotate(-20)";});
     },
@@ -209,7 +212,7 @@ export default Vue.extend({
             .attr("y", d => this.y(d.f7_day_average_case_rate))
             .attr("x", d => this.x(d.current_date_range))
             .attr("width", this.x.bandwidth())
-            .style("fill", "#69b3a2")
+            .style("fill", this.color)
        },
         update => {
           update
@@ -238,9 +241,13 @@ export default Vue.extend({
     mouseOn(d){
       const ttipShift = 15;
       const ttip = select(this.$refs.tooltip_choro)
+    
+   ttip.select("#date")
+      .text(`Date range: ${d.current_date_range}`)     
+      .classed("hidden", false);
    
     ttip.select("#case-count")
-      .text(`Case count ${d.f7_day_average_case_rate}`)     
+      .text(`Case count: ${d.f7_day_average_case_rate}`)     
       .classed("hidden", false);
         
      // fix location
