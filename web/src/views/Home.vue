@@ -11,7 +11,7 @@
           <div class="row m-0 w-100 d-flex justify-content-center">
            <img src="@/assets/logo-full-white-01.svg" alt="Outbreak.info" width="300"/>
           </div>
-          <h1 class="text-light my-1 mx-3"> Local Build</h1>
+          <h1 class="my-1 mx-3" style="color:#32CD32"> Local Build</h1>
           <p class="text-light my-1 mx-3">
             a standardized, open-source database of COVID-19 resources and epidemiology data
           </p>
@@ -47,19 +47,29 @@
   </section>
   <section id=bar>
     <div class="d-flex justify-content-center align-items-center mb-4">
-    <!-- Barchart -->
-    <div class="d-flex align-items-start justify-content-center" style="margin-left: 50px;" :class="{'flex-wrap' : mediumScreen}">
-    <div class="barchart-container">
-        <StackedBargraph :data="seqLocCounts" :admin_level="admin_level"/>
+      <!-- Barchart Location Counts-->
+      <div class="d-flex align-items-start justify-content-center" style="margin-left: 50px;" :class="{'flex-wrap' : mediumScreen}">
+        <div class="barchart-container">
+          <StackedBargraph :data="seqLocCounts" :admin_level="admin_level" :color="`#32CD32`"/>
+        </div>
+      </div>
+      <!-- Barchart Sequencing Acknowledgements-->
+      <div class="d-flex align-items-start justify-content-center" style="margin-left: 50px;" :class="{'flex-wrap' : mediumScreen}">
+        <div class="barchart-container">
+          <SequencerAcknowledgements :data="labCounts" :color="`#32CD32`" :displayCount=10 v-if="labCounts"/>
+        </div>
+      </div>
     </div>
-    </div>
+  </section>
+  <section id=count>
+    <div class="d-flex justify-content-center align-items-center mb-4"> 
     <!-- Sequencing Hist -->
     <div class="d-flex align-items-start justify-content-center" style="margin-left: 50px;" :class="{'flex-wrap' : mediumScreen}"> 
      <div class="container">
         <div v-for="(prev, index) in seqCountsLineWindowed" class="box" :key="index" :class="[mediumScreen ? 'w-100' : 'w-33']">          
            <SequencingHistogram :data="prev.data" :axisScale="maxSequences" :allowDetected="false" :width="widthHist" :height="heightHist" :downward="false" 
            :includeXAxis="true" :title="`${prev.id} Samples sequenced per day over last ${recentWindow} days`" 
-           :margin="marginHist" :onlyTotals="true" :detectedColor="`#69b3a2`" :notDetectedColor="`#969998`" v-if="seqCountsLineWindowed"/>     
+           :margin="marginHist" :onlyTotals="true" :detectedColor="`#32CD32`" :notDetectedColor="`#969998`" v-if="seqCountsLineWindowed"/>     
        </div>
      </div>
      </div>
@@ -89,7 +99,7 @@
    <!-- Case / Sequences Info -->
    <section id=epi>
      <div class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal">
-        <CaseHistogram :data="caseData" :targetLocation="loc" v-if="caseData"/>      
+        <CaseHistogram :data="caseData" :targetLocation="loc" :color="`#32CD32`" v-if="caseData"/>      
      </div>
      <div class="d-flex flex-wrap justify-content-center align-items-center mb-4" id="longitudinal">
      <!--<ReportChoroplethZipcode report="loc" :showCopy="false" :smallMultiples="true" :recentWindow="recentWindow" :showLegend="false" :data="choro.values" :countThreshold="choroCountThreshold" :fillMax="1" :location="selectedLocation.label" :colorScale="choroColorScale" :mutationName="choro.key" :widthRatio="1" :abbloc="loc" :poly=shapeData :outline=outlineData />-->
@@ -110,6 +120,8 @@ import StackedBargraph from "@/components/StackedBargraph.vue";
 import ReportPrevalence from "@/components/ReportPrevalence.vue";
 import CaseHistogram from "@/components/CaseHistogram.vue";
 import ReportChoroplethZipcode from "@/components/ReportChoroplethZipcode.vue";
+import SequencerAcknowledgements from "@/components/SequencerAcknowledgements.vue";
+
 
 import {
   getGlanceSummary
@@ -149,6 +161,7 @@ import {
   getPrevalenceofCuratedLineages,
   findLocationMetadata,
   getCaseCounts,
+  getLabCounts
 } from "@/api/genomics.js";
 import {
   timeDay,
@@ -168,6 +181,7 @@ export default {
     SequencingHistogram,
     ReportPrevalence,
     CaseHistogram,
+    SequencerAcknowledgements,
     //ReportChoroplethZipcode
  },
   data() {
@@ -188,6 +202,7 @@ export default {
       queryLocation: null,
       xmin: null,
       dateRangePeriod:8,
+      labCounts:null,
       xmax: null,
       caseData: null,
       caseMax: null,
@@ -200,6 +215,7 @@ export default {
       countLocSubscription: null,
       basicSubscription: null,
       dataReportSubscription:null,
+      labCountSubscription:null,
       locationSubscription:null,
       caseSubscription:null,
       dateUpdated: null,
@@ -352,6 +368,12 @@ export default {
     this.caseMax=1000;
   })
   },
+  //set up information for the lab origination counts
+  setupLabCounts(){
+    this.labCountSubscription = getLabCounts(this.$genomicsurl).subscribe(results => {
+        this.labCounts=results;
+    })
+  },
   // set up information for each of the prevlance reports
   setupPrevalence(){    
     var totalThresh = 25; 
@@ -453,6 +475,9 @@ export default {
     if (this.countSubscription) {
       this.countSubscription.unsubscribe();
     }
+    if (this.labCountSubscription) {
+      this.labCountSubscription.unsubscribe();
+    }
     this.dataSubscription.unsubscribe();
     if (this.updatedSubscription) {
       this.updatedSubscription.unsubscribe();
@@ -466,6 +491,7 @@ export default {
     this.getLocationName();
     this.setupReport();
     this.setupCaseCounts();
+    this.setupLabCounts();
     this.loc= json["locationFocus"];
     this.updateSequenceCount();
     this.getAllSequencesByLocation(this.admin_level);
@@ -482,6 +508,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+
 .resources-intro {
     background: #507192;
     border-left: 3px solid white;
