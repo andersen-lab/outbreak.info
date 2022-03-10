@@ -8,6 +8,6 @@ COPY /outbreak-api-lite/elastic_search.py .
 ADD /outbreak-api-lite/elastic_search.py /
 RUN /bin/bash -c "pip install -r requirements.txt"
 ADD /web/src/localConfig.json .
-
+RUN mkdir -p ./shapefiles
 CMD ["python", "-u", "./elastic_search.py", "-j", "./new_api_data.json", "-c", "./localConfig.json", "--hostname", "es"]
 
